@@ -54,10 +54,6 @@ body {
   margin-bottom: 8px;
   align-items: end;
 }
-.row.existing-row .cell:first-child,
-.row.desired-row .cell:first-child {
-  min-width: 160px;
-}
 .row.existing-row .cell label,
 .row.desired-row .cell label {
   display:block; font-size: 13px; color:#666; margin-bottom: 4px;
@@ -70,6 +66,42 @@ body {
 }
 .row.existing-row .actions,
 .row.desired-row .actions { justify-self: end; }
+
+/* 既設：設置方角セル内で削除ボタンを横並びにするラッパ */
+.ori-with-action {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.inline-delete {
+  white-space: nowrap;
+}
+
+/* スマホ向け最適化（幅 <= 480px） */
+@media (max-width: 480px){
+  /* 既設：サイズプルダウンを小さめに */
+  .row.existing-row .cell.size select {
+    width: 120px;         /* 小さくする */
+    min-width: 110px;
+    max-width: 140px;
+  }
+
+  /* 既設：グリッドを2列にし、方角と削除を同じ行に */
+  .row.existing-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "size count"
+      "orientation orientation"; /* actionsセルは非表示にして、方角セル内の削除ボタンを使用 */
+  }
+  .row.existing-row .cell.size { grid-area: size; }
+  .row.existing-row .cell.count { grid-area: count; }
+  .row.existing-row .cell.orientation { grid-area: orientation; }
+
+  /* 既設：従来の actions セルはスマホでは隠す（方角セル内のボタンを使う） */
+  .row.existing-row .cell.actions {
+    display: none;
+  }
+}
 
 /* ボタン */
 .btn-row { margin: 8px 0 0; }

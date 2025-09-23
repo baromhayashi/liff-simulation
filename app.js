@@ -131,24 +131,27 @@ function paintExistingRows(){
   const wrap = document.getElementById("existing-rows");
   wrap.innerHTML = existingRows.map(r => `
     <div class="row existing-row" id="row-${r.id}">
-      <div class="cell">
+      <div class="cell size">
         <label>サイズ</label>
         <select id="ex-size-${r.id}">
           ${SIZES.map(sz => `<option value="${sz}" ${sz===r.size?'selected':''}>${sz}</option>`).join("")}
         </select>
       </div>
-      <div class="cell">
+      <div class="cell count">
         <label>台数</label>
         <input type="number" id="ex-count-${r.id}" min="0" value="${r.count}" />
       </div>
-      <div class="cell">
+      <div class="cell orientation">
         <label>設置方角</label>
-        <select id="ex-ori-${r.id}">
-          ${["南","北","東","西"].map(o => `<option value="${o}" ${o===r.orientation?'selected':''}>${o}面</option>`).join("")}
-        </select>
+        <div class="ori-with-action">
+          <select id="ex-ori-${r.id}">
+            ${["南","北","東","西"].map(o => `<option value="${o}" ${o===r.orientation?'selected':''}>${o}面</option>`).join("")}
+          </select>
+          <button type="button" class="btn btn-danger inline-delete" id="ex-del-${r.id}">削除</button>
+        </div>
       </div>
       <div class="cell actions">
-        <button type="button" class="btn btn-danger" id="ex-del-${r.id}">削除</button>
+        <button type="button" class="btn btn-danger" id="ex-del-dup-${r.id}">削除</button>
       </div>
     </div>
   `).join("");
@@ -160,7 +163,9 @@ function paintExistingRows(){
       const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v;
     });
     qs(`#ex-ori-${r.id}`).addEventListener("change", e => r.orientation = e.target.value);
+    // どちらの削除ボタンでも削除できるように
     qs(`#ex-del-${r.id}`).addEventListener("click", () => removeExistingRow(r.id));
+    qs(`#ex-del-dup-${r.id}`).addEventListener("click", () => removeExistingRow(r.id));
   });
 }
 
@@ -214,7 +219,7 @@ function paintDesiredRows(){
 }
 
 // =========================
-/* 送信 */
+/* 送信（計算ロジックは前回と同じ） */
 // =========================
 function onSubmit(e){
   e.preventDefault();
@@ -239,13 +244,11 @@ function onSubmit(e){
     monthlyBills = Array(12).fill(avg);
   }
 
-  // 月間平均（実額がある月はそれで平均。欠損のみ除外）
   const provided = monthlyBills.filter(v => v>0);
   const monthlyAvg = provided.length>0
     ? (provided.reduce((a,b)=>a+b,0) / provided.length)
     : 0;
 
-  // 欠損は平均×季節係数で補完
   const completedBills = monthlyBills.map((v, idx) => {
     if (v>0) return v;
     const m = idx+1;
@@ -271,10 +274,8 @@ function onSubmit(e){
 
   // ========== 削減額計算 ==========
   const scenarios = acVariants.map(acPct => {
-    // 空調費（月） = 月間平均電気代 × 空調比率
     const acCostMonthly = avgBill * (acPct/100);
 
-    // 台数比率 → 定数β
     const totalUnits = SIZES.reduce((acc, sz) => acc + sumOrient(existing[sz] || {}), 0);
     const validSizes = SIZES.filter(sz => sumOrient(existing[sz] || {}) > 0);
 
@@ -282,24 +283,21 @@ function onSubmit(e){
     let betaTotal = 0;
     for (const sz of validSizes){
       const units  = sumOrient(existing[sz]);
-      const ratio  = units / totalUnits * 100; // 台数比率[%]
-      beta[sz]     = (ALPHA[sz] || 0) * ratio; // 定数β
+      const ratio  = units / totalUnits * 100;
+      beta[sz]     = (ALPHA[sz] || 0) * ratio;
       betaTotal   += beta[sz];
     }
 
-    // サイズ補正[%]
     const sizeAdj = {};
     for (const sz of validSizes){
       sizeAdj[sz] = beta[sz] / (betaTotal || 1) * 100;
     }
 
-    // サイズ別 月間電気代（= 空調費 × サイズ補正）
     const sizeMonthlyCost = {};
     for (const sz of validSizes){
       sizeMonthlyCost[sz] = acCostMonthly * (sizeAdj[sz]/100);
     }
 
-    // サイズ別 加重平均節電率（方角別台数で加重）
     const sizeWeightedRate = {};
     for (const sz of validSizes){
       const base = BASE_SAVING_RATE[sz] || 0;
@@ -310,21 +308,17 @@ function onSubmit(e){
         const n = counts[o] || 0;
         if (n>0){ sumRates += adjustByOrientation(base, o) * n; }
       }
-      const w = total>0 ? (sumRates / total) : 0;
-      sizeWeightedRate[sz] = w; // %
+      sizeWeightedRate[sz] = total>0 ? (sumRates / total) : 0;
     }
 
-    // サイズ別節電額
     const sizeSaving = {};
     for (const sz of validSizes){
       sizeSaving[sz] = sizeMonthlyCost[sz] * (sizeWeightedRate[sz]/100);
     }
 
-    // 合計節電額・全体節電率
     const totalSaving = Object.values(sizeSaving).reduce((a,b)=>a+b,0);
     const totalSavingPct = avgBill>0 ? (totalSaving / avgBill * 100) : 0;
 
-    // 年間想定削減額（各月：平均×月係数×全体節電率）
     let annualSaving = 0;
     for (let m=1; m<=12; m++){
       const monthBase = avgBill * (MONTH_COEF[m] || 1);
@@ -341,35 +335,16 @@ function onSubmit(e){
   });
 
   // ========== 導入費用（税別） ==========
-  // 総塗布面積 = Σ(面積上限 × 施工希望台数)
   const totalArea = SIZES.reduce((acc, sz) => acc + (AREA[sz] * (desired[sz]||0)), 0);
-
-  // 生産性：8.4㎡ / 人・日（=16.8㎡ / 2人・日）
   const personDaysNeeded = totalArea>0 ? Math.ceil(totalArea / 8.4) : 0;
-
-  // 人数（上限4人、下限1人）
   const crew = Math.min(4, Math.max(1, personDaysNeeded));
-
-  // 施工日数 = ceil(必要な人日 / 人数)
   const workDays = personDaysNeeded>0 ? Math.ceil(personDaysNeeded / crew) : 0;
-
-  // 清掃・養生費（固定）
   const cleanFee = workDays <= 1 ? 80000 : 100000;
-
-  // 予備費（固定式）
   const miscFee = 60000 + 10000 * workDays;
-
-  // 交通費：フロントでは 0 円（住所→距離の算出はサーバ側で実施を想定）
-  const transport = 0;
-
-  // 宿泊費：泊数 = max(日数−1,0) × 人数 × 10,000
+  const transport = 0; // サーバ側で上書き予定
   const nights = Math.max(workDays - 1, 0);
   const lodging = nights * crew * 10000;
-
-  // 本体価格合計（パッケージ×台数）— 固定単価テーブル PRICE を使用
   const packageSum = SIZES.reduce((acc, sz) => acc + (PRICE[sz] * (desired[sz]||0)), 0);
-
-  // 導入費用（税別、簡易）
   const introduceCost = packageSum + cleanFee + miscFee + transport + lodging;
 
   // ========== 回収年数（3パターン） ==========

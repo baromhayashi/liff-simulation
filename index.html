@@ -2,28 +2,55 @@
 <html>
 <head>
     <title>テラノペイント シミュレーション</title>
-    <link rel="stylesheet" href="style.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <h1>テラノペイント シミュレーション</h1>
 
     <div class="container">
         <section class="form-section">
-            <h2>削減金額シミュレーション</h2>
+            <h2>基本情報</h2>
             <div class="form-group">
-                <label for="electricity-bill">過去1年間の月平均電気代 (円)</label>
-                <input type="number" id="electricity-bill" placeholder="例: 100000" required>
+                <label for="client-name">クライアント様名（株式会社を含む正式名称）</label>
+                <input type="text" id="client-name" placeholder="例: 株式会社〇〇" required>
             </div>
             <div class="form-group">
+                <label for="project-name">案件名（正式な施設名）</label>
+                <input type="text" id="project-name" placeholder="例: 〇〇ビルディング" required>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <h2>過去の電気代情報</h2>
+            <div class="form-group">
+                <label>電気代入力方法:</label>
+                <select id="bill-input-type">
+                    <option value="monthly">月ごとに入力</option>
+                    <option value="annual">年間平均で入力</option>
+                </select>
+            </div>
+            <div id="monthly-bill-input">
+                </div>
+            <div id="annual-bill-input" style="display:none;">
+                <div class="form-group">
+                    <label for="annual-bill">年間平均電気代 (円)</label>
+                    <input type="number" id="annual-bill" placeholder="例: 100000" min="0" required>
+                </div>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <h2>削減金額シミュレーション</h2>
+            <div class="form-group">
                 <label for="ac-ratio">施設の空調比率 (%)</label>
-                <input type="number" id="ac-ratio" placeholder="例: 60" required>
+                <input type="number" id="ac-ratio" placeholder="例: 60" min="0" max="100" required>
             </div>
             
             <h3 class="subsection-title">室外機台数・設置方角</h3>
             <div id="outdoor-unit-container">
                 </div>
-            <button id="add-unit-button" class="btn add-btn">室外機を追加</button>
+            <button id="add-unit-button" class="btn add-btn">＋室外機を追加</button>
         </section>
 
         <section class="form-section">

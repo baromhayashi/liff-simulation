@@ -40,7 +40,7 @@ function initializeApp() {
     
     // 初期表示として月ごとの入力欄を生成
     generateMonthlyInputs();
-    addOutdoorUnitInput(); // 最初の1つを最初から表示
+    addOutdoorUnitInput();
 }
 
 function generateMonthlyInputs() {
@@ -80,5 +80,104 @@ function addOutdoorUnitInput() {
 }
 
 async function calculateSimulation() {
-    // 省略：計算ロジックは前回と同じです。
+    // 必須項目チェック
+    const clientName = document.getElementById('client-name').value;
+    const projectName = document.getElementById('project-name').value;
+    const acRatioInput = parseFloat(document.getElementById('ac-ratio').value);
+    const estimatedCost = parseFloat(document.getElementById('estimated-cost').value);
+
+    if (!clientName || !projectName || isNaN(acRatioInput) || isNaN(estimatedCost)) {
+        alert("基本情報と空調比率、見積金額は必須項目です。");
+        return;
+    }
+
+    let monthlyAvgBill;
+    const inputType = document.querySelector('input[name="bill-type"]:checked').value;
+
+    if (inputType === 'monthly') {
+        const monthlyBills = Array.from(document.querySelectorAll('.monthly-grid input')).map(input => parseFloat(input.value) || 0);
+        const validMonths = monthlyBills.filter(bill => bill > 0).length;
+        if (validMonths === 0) {
+            alert("電気代を1ヶ月分以上入力してください。");
+            return;
+        }
+        monthlyAvgBill = monthlyBills.reduce((sum, bill) => sum + bill, 0) / validMonths;
+    } else {
+        monthlyAvgBill = parseFloat(document.getElementById('annual-bill').value);
+    }
+    
+    if (isNaN(monthlyAvgBill) || monthlyAvgBill <= 0) {
+        alert("有効な電気代を入力してください。");
+        return;
+    }
+
+    const outdoorUnits = Array.from(document.querySelectorAll('.outdoor-unit-group')).map(group => ({
+        size: group.querySelector('.unit-size-select').value,
+        count: parseInt(group.querySelector('.unit-count-input').value) || 0,
+        direction: group.querySelector('.unit-direction-select').value
+    })).filter(unit => unit.count > 0);
+
+    const totalUnits = outdoorUnits.reduce((sum, unit) => sum + unit.count, 0);
+    if (totalUnits === 0) {
+        alert("室外機の台数を入力してください。");
+        return;
+    }
+
+    const alphaFactors = { "S": 1, "M": 1, "L": 2, "LL": 3, "3L": 5, "4L": 8, "5L": 13, "6L": 21, "7L": 34, "8L": 55 };
+    const baseSavingRates = { "S": 0.08, "M": 0.12, "L": 0.16, "LL": 0.20, "3L": 0.24, "4L": 0.24, "5L": 0.20, "6L": 0.18, "7L": 0.16, "8L": 0.14 };
+    
+    let resultHTML = '';
+    const acRatios = [acRatioInput - 5, acRatioInput, acRatioInput + 5];
+
+    acRatios.forEach(currentAcRatio => {
+        if (currentAcRatio < 0) return;
+
+        let totalWeightedSavingRate = 0;
+        let totalBeta = 0;
+
+        outdoorUnits.forEach(unit => {
+            let savingRate = baseSavingRates[unit.size];
+            switch (unit.direction) {
+                case '北':
+                    savingRate *= 0.5;
+                    break;
+                case '東':
+                case '西':
+                    savingRate *= 0.8;
+                    break;
+            }
+            totalWeightedSavingRate += savingRate * unit.count;
+            totalBeta += alphaFactors[unit.size] * unit.count;
+        });
+
+        const monthlyCoeffs = [1.019, 1.019, 1.019, 0.934, 0.934, 0.934, 1.085, 1.085, 1.085, 0.934, 0.934, 1.019];
+        let totalAnnualSaving = 0;
+        const overallSavingRate = (totalWeightedSavingRate / totalUnits) * 100;
+
+        monthlyCoeffs.forEach(coeff => {
+            const monthlyBill = monthlyAvgBill * coeff;
+            totalAnnualSaving += monthlyBill * (overallSavingRate / 100);
+        });
+
+        const avgMonthlySaving = totalAnnualSaving / 12;
+        const paybackPeriodMonths = Math.ceil(estimatedCost / avgMonthlySaving);
+        
+        const annualSaving = totalAnnualSaving;
+        const monthlySaving = totalAnnualSaving / 12;
+
+        resultHTML += `
+            <div class="result-item">
+                <h3>空調比率 ${currentAcRatio}% の場合</h3>
+                <p>月間削減金額: ${Math.ceil(monthlySaving)} 円</p>
+                <p>年間削減金額: ${Math.ceil(annualSaving)} 円</p>
+                <p>全体節電率: ${overallSavingRate.toFixed(1)} %</p>
+                <p>投資回収期間: ${paybackPeriodMonths} ヶ月</p>
+            </div>
+        `;
+    });
+
+    resultHTML += `<div class="result-item"><h3>導入費用合計</h3><p>${estimatedCost.toFixed(0)} 円</p></div>`;
+
+    document.getElementById('result-content').innerHTML = resultHTML;
+    document.getElementById('result-area').style.display = 'block';
 }

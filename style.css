@@ -63,9 +63,15 @@ select {
     margin-bottom: 15px;
 }
 
+.input-type-wrapper label {
+    font-weight: normal;
+    display: inline-block;
+    margin-right: 20px;
+}
+
 .monthly-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
 }
 
@@ -76,6 +82,7 @@ select {
 
 .monthly-grid input {
     text-align: right;
+    width: auto;
 }
 
 .outdoor-unit-group {
@@ -115,5 +122,3 @@ select {
     background-color: #008CBA;
     margin-top: 20px;
 }
-
-/* その他のスタイル */

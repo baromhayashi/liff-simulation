@@ -84,7 +84,7 @@ body {
 .btn-danger { border-color: #ffdddd; background: #ffecec; }
 .btn-danger:hover { background: #ffdede; }
 
-/* テーブル（価格・面積） */
+/* 表（結果表示用） */
 .table-scroll { overflow-x:auto; }
 .table { width:100%; border-collapse: collapse; }
 .table th, .table td {

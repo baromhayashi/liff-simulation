@@ -30,7 +30,7 @@
                 <input type="text" id="project-name" placeholder="施設名など" required />
               </div>
             </div>
-            <!-- 裏側で距離算出に使いたい場合はこの住所をサーバへ送ってください（画面には出す） -->
+            <!-- サーバ側で距離算出を行う場合に利用（任意） -->
             <div class="form-group">
               <label for="site-address">施工住所（任意）</label>
               <input type="text" id="site-address" placeholder="例：東京都千代田区〇〇…（サーバ側で距離算出に利用）" />
@@ -85,13 +85,6 @@
             <div class="btn-row">
               <button type="button" class="btn" id="add-desired-row">＋ 室外機を追加</button>
             </div>
-          </div>
-
-          <!-- 価格・面積 上限の設定 -->
-          <div class="form-section">
-            <h2 class="section-title">サイズ別 価格・面積上限（税別）</h2>
-            <p class="section-help">「施工価格早見表」の値を入力してください。未入力は0として扱います。</p>
-            <div id="price-area-table"></div>
           </div>
 
           <button type="submit" id="calculate-button" class="form-btn">シミュレーション実行</button>

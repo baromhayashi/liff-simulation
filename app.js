@@ -32,6 +32,14 @@ const ceilMoney = (x) => Math.ceil(x);
 const roundPct1  = (x) => Math.round(x * 10) / 10; // 小数1桁四捨五入
 const ceilMonths = (x) => Math.ceil(x);
 
+// ▼「施工価格早見表」の固定テーブル（税別）※ご提示値を採用
+const PRICE = { // 単価[円/台]
+  S:16000, M:26000, L:34000, LL:54000, "3L":84000, "4L":92000, "5L":132000, "6L":154000, "7L":178000, "8L":206000
+};
+const AREA = {  // 面積上限[㎡/台]
+  S:0.8, M:1.3, L:1.7, LL:2.7, "3L":4.2, "4L":4.6, "5L":6.6, "6L":7.7, "7L":8.9, "8L":10.3
+};
+
 // 既設：行追加式データ
 let existingRows = []; // {id, size, count, orientation}
 let desiredRows  = []; // {id, size, count}
@@ -47,12 +55,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderExistingList();
   document.getElementById("add-existing-row").addEventListener("click", addExistingRow);
 
-  // 施工希望（サイズ/台数）
+  // 施工希望（サイズ/台数）— デフォルトで1行
   renderDesiredList();
   document.getElementById("add-desired-row").addEventListener("click", addDesiredRow);
-
-  // 価格・面積
-  renderPriceAreaTable();
 
   document.getElementById("simulation-form").addEventListener("submit", onSubmit);
 
@@ -159,12 +164,12 @@ function paintExistingRows(){
   });
 }
 
-// ===== 施工希望：行追加式 =====
+// ===== 施工希望：行追加式（デフォルト1行） =====
 function renderDesiredList(){
   const host = document.getElementById("desired-list");
   host.innerHTML = `<div id="desired-rows"></div>`;
   desiredRows = []; // 初期化
-  addDesiredRow();  // 初期行
+  addDesiredRow();  // 初期行（表示済みの状態）
 }
 
 function addDesiredRow(){
@@ -206,29 +211,6 @@ function paintDesiredRows(){
     });
     qs(`#des-del-${r.id}`).addEventListener("click", () => removeDesiredRow(r.id));
   });
-}
-
-// ===== 価格・面積上限（固定テーブル） =====
-function renderPriceAreaTable(){
-  const host = document.getElementById("price-area-table");
-  host.innerHTML = `
-    <div class="table-scroll">
-      <table class="table">
-        <thead>
-          <tr><th>サイズ</th><th>パッケージ価格（税別）</th><th>面積上限（㎡/台）</th></tr>
-        </thead>
-        <tbody>
-          ${SIZES.map(sz => `
-            <tr>
-              <td>${sz}</td>
-              <td><input type="number" min="0" id="price-${sz}" placeholder="例：150000" /></td>
-              <td><input type="number" min="0" step="0.1" id="area-${sz}" placeholder="例：5.0" /></td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
 }
 
 // =========================
@@ -287,13 +269,6 @@ function onSubmit(e){
   // --- 施工希望（行）→ サイズ合計 集計 ---
   const desired = aggregateDesiredRows(desiredRows);
 
-  // --- 価格・面積上限 ---
-  const price = {}, area = {};
-  for (const sz of SIZES){
-    price[sz] = Math.max(0, +gv(`price-${sz}`) || 0);
-    area[sz]  = Math.max(0, +gv(`area-${sz}`)  || 0);
-  }
-
   // ========== 削減額計算 ==========
   const scenarios = acVariants.map(acPct => {
     // 空調費（月） = 月間平均電気代 × 空調比率
@@ -333,9 +308,7 @@ function onSubmit(e){
       let sumRates = 0;
       for (const o of ["南","北","東","西"]){
         const n = counts[o] || 0;
-        if (n>0){
-          sumRates += adjustByOrientation(base, o) * n;
-        }
+        if (n>0){ sumRates += adjustByOrientation(base, o) * n; }
       }
       const w = total>0 ? (sumRates / total) : 0;
       sizeWeightedRate[sz] = w; // %
@@ -369,7 +342,7 @@ function onSubmit(e){
 
   // ========== 導入費用（税別） ==========
   // 総塗布面積 = Σ(面積上限 × 施工希望台数)
-  const totalArea = SIZES.reduce((acc, sz) => acc + (area[sz] * (desired[sz]||0)), 0);
+  const totalArea = SIZES.reduce((acc, sz) => acc + (AREA[sz] * (desired[sz]||0)), 0);
 
   // 生産性：8.4㎡ / 人・日（=16.8㎡ / 2人・日）
   const personDaysNeeded = totalArea>0 ? Math.ceil(totalArea / 8.4) : 0;
@@ -393,10 +366,8 @@ function onSubmit(e){
   const nights = Math.max(workDays - 1, 0);
   const lodging = nights * crew * 10000;
 
-  // 本体価格合計（パッケージ×台数）
-  const price = {}; const areaCopy = {}; // price は上で取っているが描画都合で再計算
-  SIZES.forEach(sz => { price[sz] = Math.max(0, +gv(`price-${sz}`) || 0); areaCopy[sz] = Math.max(0, +gv(`area-${sz}`) || 0); });
-  const packageSum = SIZES.reduce((acc, sz) => acc + (price[sz] * (desired[sz]||0)), 0);
+  // 本体価格合計（パッケージ×台数）— 固定単価テーブル PRICE を使用
+  const packageSum = SIZES.reduce((acc, sz) => acc + (PRICE[sz] * (desired[sz]||0)), 0);
 
   // 導入費用（税別、簡易）
   const introduceCost = packageSum + cleanFee + miscFee + transport + lodging;

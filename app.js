@@ -32,10 +32,9 @@ const ceilMoney = (x) => Math.ceil(x);
 const roundPct1  = (x) => Math.round(x * 10) / 10; // 小数1桁四捨五入
 const ceilMonths = (x) => Math.ceil(x);
 
-// =========================
 // 既設：行追加式データ
-// =========================
 let existingRows = []; // {id, size, count, orientation}
+let desiredRows  = []; // {id, size, count}
 
 // =========================
 // 初期化
@@ -44,10 +43,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderMonthlyInputs();
   setupBillTypeToggle();
 
+  // 既設（サイズ/台数/方角）
   renderExistingList();
   document.getElementById("add-existing-row").addEventListener("click", addExistingRow);
 
-  renderDesiredTable();
+  // 施工希望（サイズ/台数）
+  renderDesiredList();
+  document.getElementById("add-desired-row").addEventListener("click", addDesiredRow);
+
+  // 価格・面積
   renderPriceAreaTable();
 
   document.getElementById("simulation-form").addEventListener("submit", onSubmit);
@@ -102,12 +106,9 @@ function setupBillTypeToggle(){
 // ===== 既設：行追加式 =====
 function renderExistingList(){
   const host = document.getElementById("existing-list");
-  host.innerHTML = `
-    <div id="existing-rows"></div>
-  `;
+  host.innerHTML = `<div id="existing-rows"></div>`;
   existingRows = []; // 初期化
-  // 初期行を1つ
-  addExistingRow();
+  addExistingRow();  // 初期行
 }
 
 function addExistingRow(){
@@ -123,31 +124,7 @@ function removeExistingRow(id){
 
 function paintExistingRows(){
   const wrap = document.getElementById("existing-rows");
-  wrap.innerHTML = existingRows.map(r => existingRowHtml(r)).join("");
-  // イベント付与
-  existingRows.forEach(r => {
-    const sizeSel = document.getElementById(`ex-size-${r.id}`);
-    const countInp = document.getElementById(`ex-count-${r.id}`);
-    const oriSel = document.getElementById(`ex-ori-${r.id}`);
-    const delBtn = document.getElementById(`ex-del-${r.id}`);
-
-    sizeSel.addEventListener("change", e => {
-      r.size = e.target.value;
-    });
-    countInp.addEventListener("input", e => {
-      const v = Math.max(0, +e.target.value || 0);
-      r.count = v;
-      e.target.value = v;
-    });
-    oriSel.addEventListener("change", e => {
-      r.orientation = e.target.value;
-    });
-    delBtn.addEventListener("click", () => removeExistingRow(r.id));
-  });
-}
-
-function existingRowHtml(r){
-  return `
+  wrap.innerHTML = existingRows.map(r => `
     <div class="row existing-row" id="row-${r.id}">
       <div class="cell">
         <label>サイズ</label>
@@ -169,30 +146,69 @@ function existingRowHtml(r){
         <button type="button" class="btn btn-danger" id="ex-del-${r.id}">削除</button>
       </div>
     </div>
-  `;
+  `).join("");
+
+  // イベント付与
+  existingRows.forEach(r => {
+    qs(`#ex-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
+    qs(`#ex-count-${r.id}`).addEventListener("input", e => {
+      const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v;
+    });
+    qs(`#ex-ori-${r.id}`).addEventListener("change", e => r.orientation = e.target.value);
+    qs(`#ex-del-${r.id}`).addEventListener("click", () => removeExistingRow(r.id));
+  });
 }
 
-// ===== 施工希望台数 =====
-function renderDesiredTable(){
-  const host = document.getElementById("desired-table");
-  host.innerHTML = `
-    <div class="table-scroll">
-      <table class="table">
-        <thead><tr><th>サイズ</th><th>施工希望台数</th></tr></thead>
-        <tbody>
-          ${SIZES.map(sz => `
-            <tr>
-              <td>${sz}</td>
-              <td><input type="number" min="0" id="des-${sz}" value="0" /></td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
+// ===== 施工希望：行追加式 =====
+function renderDesiredList(){
+  const host = document.getElementById("desired-list");
+  host.innerHTML = `<div id="desired-rows"></div>`;
+  desiredRows = []; // 初期化
+  addDesiredRow();  // 初期行
+}
+
+function addDesiredRow(){
+  const id = cryptoRandomId();
+  desiredRows.push({ id, size: "S", count: 1 });
+  paintDesiredRows();
+}
+
+function removeDesiredRow(id){
+  desiredRows = desiredRows.filter(r => r.id !== id);
+  paintDesiredRows();
+}
+
+function paintDesiredRows(){
+  const wrap = document.getElementById("desired-rows");
+  wrap.innerHTML = desiredRows.map(r => `
+    <div class="row desired-row" id="drow-${r.id}">
+      <div class="cell">
+        <label>サイズ</label>
+        <select id="des-size-${r.id}">
+          ${SIZES.map(sz => `<option value="${sz}" ${sz===r.size?'selected':''}>${sz}</option>`).join("")}
+        </select>
+      </div>
+      <div class="cell">
+        <label>台数</label>
+        <input type="number" id="des-count-${r.id}" min="0" value="${r.count}" />
+      </div>
+      <div class="cell actions">
+        <button type="button" class="btn btn-danger" id="des-del-${r.id}">削除</button>
+      </div>
     </div>
-  `;
+  `).join("");
+
+  // イベント付与
+  desiredRows.forEach(r => {
+    qs(`#des-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
+    qs(`#des-count-${r.id}`).addEventListener("input", e => {
+      const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v;
+    });
+    qs(`#des-del-${r.id}`).addEventListener("click", () => removeDesiredRow(r.id));
+  });
 }
 
-// ===== 価格・面積上限 =====
+// ===== 価格・面積上限（固定テーブル） =====
 function renderPriceAreaTable(){
   const host = document.getElementById("price-area-table");
   host.innerHTML = `
@@ -221,23 +237,23 @@ function renderPriceAreaTable(){
 function onSubmit(e){
   e.preventDefault();
 
-  const client  = val("client-name").trim();
-  const project = val("project-name").trim();
+  const client  = gv("client-name").trim();
+  const project = gv("project-name").trim();
   if (!client || !project){
     alert("クライアント名／案件名を入力してください。");
     return;
   }
 
   // --- 電気代 ---
-  const monthlyMode = document.getElementById("radio-monthly").checked;
+  const monthlyMode = qs("#radio-monthly").checked;
   let monthlyBills = [];
   if (monthlyMode){
     for (let m=1; m<=12; m++){
-      const v = +val(`bill-${m}`) || 0;
+      const v = +gv(`bill-${m}`) || 0;
       monthlyBills.push(v);
     }
   } else {
-    const avg = +val("annual-bill") || 0;
+    const avg = +gv("annual-bill") || 0;
     monthlyBills = Array(12).fill(avg);
   }
 
@@ -257,12 +273,8 @@ function onSubmit(e){
   const avgBill = completedBills.reduce((a,b)=>a+b,0) / 12; // 真の月間平均
 
   // --- 空調比率（3パターン） ---
-  const acBase = clampPct(+val("ac-ratio"));
-  const acVariants = [
-    clampPct(acBase - 5),
-    acBase,
-    clampPct(acBase + 5),
-  ];
+  const acBase = clampPct(+gv("ac-ratio"));
+  const acVariants = [ clampPct(acBase-5), acBase, clampPct(acBase+5) ];
 
   // --- 既設（行）→ サイズ×方角 集計 ---
   const existing = aggregateExistingRows(existingRows);
@@ -272,23 +284,15 @@ function onSubmit(e){
     return;
   }
 
-  // --- 施工希望 台数 ---
-  const desired = {};
-  for (const sz of SIZES){
-    desired[sz] = Math.max(0, +val(`des-${sz}`) || 0);
-  }
+  // --- 施工希望（行）→ サイズ合計 集計 ---
+  const desired = aggregateDesiredRows(desiredRows);
 
   // --- 価格・面積上限 ---
   const price = {}, area = {};
   for (const sz of SIZES){
-    price[sz] = Math.max(0, +val(`price-${sz}`) || 0);
-    area[sz]  = Math.max(0, +val(`area-${sz}`)  || 0);
+    price[sz] = Math.max(0, +gv(`price-${sz}`) || 0);
+    area[sz]  = Math.max(0, +gv(`area-${sz}`)  || 0);
   }
-
-  // --- 交通・宿泊 前提 ---
-  const fuelCost = Math.max(0, +val("fuel-cost") || 170);
-  const fuelEff  = Math.max(0.1, +val("fuel-eff") || 10);
-  const distanceKm = Math.max(0, +val("distance-km") || 0);
 
   // ========== 削減額計算 ==========
   const scenarios = acVariants.map(acPct => {
@@ -357,12 +361,6 @@ function onSubmit(e){
 
     return {
       acPct,
-      acCostMonthly,
-      sizeAdj,
-      sizeMonthlyCost,
-      sizeWeightedRate,
-      sizeSaving,
-      totalSaving,
       totalSavingPct,
       annualSaving,
       monthlySavingAvg
@@ -388,16 +386,16 @@ function onSubmit(e){
   // 予備費（固定式）
   const miscFee = 60000 + 10000 * workDays;
 
-  // 交通費：日毎に往復、車両1台、燃費・燃料単価から 1kmあたり(燃料単価/燃費)
-  const perKmCost = fuelCost / fuelEff; // 例：17円/km
-  const transport = (distanceKm * 2) * workDays * perKmCost;
+  // 交通費：フロントでは 0 円（住所→距離の算出はサーバ側で実施を想定）
+  const transport = 0;
 
-  // 宿泊費：泊数 = max(日数−1,0) × 人数 × 10,000（既定）
+  // 宿泊費：泊数 = max(日数−1,0) × 人数 × 10,000
   const nights = Math.max(workDays - 1, 0);
-  const lodgingUnit = Math.max(0, +val("lodging-perperson") || 10000);
-  const lodging = nights * crew * lodgingUnit;
+  const lodging = nights * crew * 10000;
 
   // 本体価格合計（パッケージ×台数）
+  const price = {}; const areaCopy = {}; // price は上で取っているが描画都合で再計算
+  SIZES.forEach(sz => { price[sz] = Math.max(0, +gv(`price-${sz}`) || 0); areaCopy[sz] = Math.max(0, +gv(`area-${sz}`) || 0); });
   const packageSum = SIZES.reduce((acc, sz) => acc + (price[sz] * (desired[sz]||0)), 0);
 
   // 導入費用（税別、簡易）
@@ -408,15 +406,15 @@ function onSubmit(e){
     const monthsPayback = sc.monthlySavingAvg>0 ? introduceCost / sc.monthlySavingAvg : Infinity;
     return {
       acPct: sc.acPct,
-      monthlySaving: ceilMoney(sc.monthlySavingAvg),     // 表示時：切上げ
-      annualSaving:  ceilMoney(sc.annualSaving),         // 表示時：切上げ
-      savingPct:     roundPct1(sc.totalSavingPct),       // 表示時：小数1桁
+      savingPct: roundPct1(sc.totalSavingPct),
+      monthlySaving: ceilMoney(sc.monthlySavingAvg),
+      annualSaving:  ceilMoney(sc.annualSaving),
       paybackMonths: Number.isFinite(monthsPayback) ? ceilMonths(monthsPayback) : null
     };
   });
 
   // ========== 結果描画 ==========
-  const res = document.getElementById("result-content");
+  const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">
       <h3>前提まとめ</h3>
@@ -426,7 +424,6 @@ function onSubmit(e){
         <div><span>必要人日</span><strong>${personDaysNeeded} 人日</strong></div>
         <div><span>施工人数</span><strong>${crew} 人</strong></div>
         <div><span>施工日数</span><strong>${workDays} 日</strong></div>
-        <div><span>交通距離（往復/日）</span><strong>${roundPct1(distanceKm*2)} km</strong></div>
       </div>
     </div>
 
@@ -466,42 +463,38 @@ function onSubmit(e){
     </div>
   `;
 
-  document.getElementById("result-area").style.display = "";
+  qs("#result-area").style.display = "";
 }
 
 // =========================
 // ヘルパ
 // =========================
-function val(id){ return document.getElementById(id).value; }
+function gv(id){ return document.getElementById(id).value; }
+function qs(sel){ return document.querySelector(sel); }
+function cryptoRandomId(){ return 'xxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)); }
+function sumOrient(obj){ return ["南","北","東","西"].reduce((a,o)=>a + (obj?.[o]||0), 0); }
+function clampPct(x){ if (isNaN(x)) return 0; return Math.max(0, Math.min(100, x)); }
+function fmtYen(x){ const n = ceilMoney(+x || 0); return n.toLocaleString("ja-JP") + " 円"; }
 
-function sumOrient(obj){ return ["南","北","東","西"].reduce((a,o)=>a + (obj[o]||0), 0); }
-
-function clampPct(x){
-  if (isNaN(x)) return 0;
-  return Math.max(0, Math.min(100, x));
-}
-
-function fmtYen(x){
-  const n = ceilMoney(+x || 0);
-  return n.toLocaleString("ja-JP") + " 円";
-}
-
-function cryptoRandomId(){
-  // 簡易ID（ブラウザ対応のため）
-  return 'xxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16));
-}
-
-/** 行式 -> サイズ×方角に集計 */
+/** 行式 -> サイズ×方角に集計（既設） */
 function aggregateExistingRows(rows){
-  const agg = {};
-  SIZES.forEach(sz => { agg[sz] = { 南:0, 北:0, 東:0, 西:0 }; });
+  const agg = {}; SIZES.forEach(sz => { agg[sz] = { 南:0, 北:0, 東:0, 西:0 }; });
   rows.forEach(r => {
-    const sz = r.size;
-    const ori = r.orientation;
-    const c = Math.max(0, Number(r.count) || 0);
+    const sz = r.size; const ori = r.orientation; const c = Math.max(0, Number(r.count) || 0);
     if (!agg[sz]) agg[sz] = { 南:0, 北:0, 東:0, 西:0 };
-    if (!agg[sz][ori] && agg[sz][ori] !== 0) agg[sz][ori] = 0;
+    if (agg[sz][ori] === undefined) agg[sz][ori] = 0;
     agg[sz][ori] += c;
+  });
+  return agg;
+}
+
+/** 行式 -> サイズ合計に集計（施工希望） */
+function aggregateDesiredRows(rows){
+  const agg = {}; SIZES.forEach(sz => agg[sz] = 0);
+  rows.forEach(r => {
+    const sz = r.size; const c = Math.max(0, Number(r.count) || 0);
+    if (agg[sz] === undefined) agg[sz] = 0;
+    agg[sz] += c;
   });
   return agg;
 }

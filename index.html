@@ -30,6 +30,11 @@
                 <input type="text" id="project-name" placeholder="施設名など" required />
               </div>
             </div>
+            <!-- 裏側で距離算出に使いたい場合はこの住所をサーバへ送ってください（画面には出す） -->
+            <div class="form-group">
+              <label for="site-address">施工住所（任意）</label>
+              <input type="text" id="site-address" placeholder="例：東京都千代田区〇〇…（サーバ側で距離算出に利用）" />
+            </div>
           </div>
 
           <!-- 電気代入力 -->
@@ -63,55 +68,22 @@
 
           <!-- 既設 室外機（行追加式：サイズ/台数/方角） -->
           <div class="form-section">
-            <h2 class="section-title">室外機サイズ別台数・設置方角（削減額の計算に使用）</h2>
+            <h2 class="section-title">室外機サイズ別台数・設置方角</h2>
             <p class="section-help">サイズ・台数・設置方角の組み合わせを必要数追加してください。</p>
-
             <div id="existing-list"></div>
-
             <div class="btn-row">
               <button type="button" class="btn" id="add-existing-row">＋ 室外機を追加</button>
             </div>
             <small>※同じサイズ・方角の行は複数追加可能です（計算時に合算されます）。</small>
           </div>
 
-          <!-- 施工希望台数（費用用：サイズ合計） -->
+          <!-- 施工希望台数（行追加式：サイズ/台数） -->
           <div class="form-section">
-            <h2 class="section-title">施工希望台数（導入費用の計算に使用）</h2>
-            <div id="desired-table"></div>
-          </div>
-
-          <!-- 交通・距離 -->
-          <div class="form-section">
-            <h2 class="section-title">交通・宿泊・諸費用の前提</h2>
-            <div class="grid-3">
-              <div class="form-group">
-                <label for="distance-km">片道距離【km】（手入力）</label>
-                <input type="number" id="distance-km" placeholder="例：50" min="0" step="0.1" />
-                <small>走行費は 17円/km（170円/L・10km/L）／車両1台／日毎に往復</small>
-              </div>
-              <div class="form-group">
-                <label for="fuel-cost">燃料単価【円/L】</label>
-                <input type="number" id="fuel-cost" value="170" min="0" />
-              </div>
-              <div class="form-group">
-                <label for="fuel-eff">燃費【km/L】</label>
-                <input type="number" id="fuel-eff" value="10" min="0.1" step="0.1" />
-              </div>
-            </div>
-            <div class="grid-3">
-              <div class="form-group">
-                <label for="lodging-perperson">宿泊費 単価（1人1泊）【円】</label>
-                <input type="number" id="lodging-perperson" value="10000" min="0" />
-                <small>泊数＝max(施工日数−1,0)</small>
-              </div>
-              <div class="form-group">
-                <label>清掃・養生費【円】</label>
-                <input type="text" value="1日=80,000円 / 2日以上=100,000円（固定）" disabled />
-              </div>
-              <div class="form-group">
-                <label>予備費【円】</label>
-                <input type="text" value="60,000円 + 10,000円 × 施工日数（固定）" disabled />
-              </div>
+            <h2 class="section-title">施工希望台数</h2>
+            <p class="section-help">導入費用の試算に用います。サイズと台数の組み合わせを追加してください。</p>
+            <div id="desired-list"></div>
+            <div class="btn-row">
+              <button type="button" class="btn" id="add-desired-row">＋ 室外機を追加</button>
             </div>
           </div>
 

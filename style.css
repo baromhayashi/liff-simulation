@@ -26,11 +26,7 @@ body {
 
 /* グリッド */
 .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-.grid-3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; }
-
-@media (max-width: 720px){
-  .grid-2, .grid-3 { grid-template-columns: 1fr; }
-}
+@media (max-width: 720px){ .grid-2 { grid-template-columns: 1fr; } }
 
 /* 入力 */
 .form-group { display: grid; gap:6px; margin-bottom: 10px; }
@@ -49,33 +45,31 @@ body {
 @media (max-width: 640px){ .monthly-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 420px){ .monthly-grid { grid-template-columns: 1fr; } }
 
-/* テーブル */
-.table-scroll { overflow-x:auto; }
-.table { width:100%; border-collapse: collapse; }
-.table th, .table td {
-  border-bottom: 1px solid #eee; padding: 8px; text-align: left; white-space: nowrap;
-}
-.table thead th { background:#fafbff; position: sticky; top: 0; z-index: 1; }
-.table input[type="number"] {
-  width: 120px; max-width: 100%;
-  padding: 8px 10px; border:1px solid #dcdde2; border-radius: 8px;
-}
-
-/* 行追加式（既設） */
-.row.existing-row {
+/* 行追加式（既設・施工希望） */
+.row.existing-row,
+.row.desired-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr auto;
   gap: 8px;
   margin-bottom: 8px;
   align-items: end;
 }
-.row.existing-row .cell label {
+.row.existing-row .cell:first-child,
+.row.desired-row .cell:first-child {
+  min-width: 160px;
+}
+.row.existing-row .cell label,
+.row.desired-row .cell label {
   display:block; font-size: 13px; color:#666; margin-bottom: 4px;
 }
 .row.existing-row .cell select,
-.row.existing-row .cell input[type="number"]{
+.row.desired-row .cell select,
+.row.existing-row .cell input[type="number"],
+.row.desired-row .cell input[type="number"]{
   width: 100%; padding: 10px 12px; border:1px solid #dcdde2; border-radius:10px; font-size:16px; background:#fff;
 }
+.row.existing-row .actions,
+.row.desired-row .actions { justify-self: end; }
 
 /* ボタン */
 .btn-row { margin: 8px 0 0; }
@@ -87,12 +81,19 @@ body {
   cursor: pointer;
 }
 .btn:hover { background: #f0f0f0; }
-.btn-danger {
-  border-color: #ffdddd;
-  background: #ffecec;
+.btn-danger { border-color: #ffdddd; background: #ffecec; }
+.btn-danger:hover { background: #ffdede; }
+
+/* テーブル（価格・面積） */
+.table-scroll { overflow-x:auto; }
+.table { width:100%; border-collapse: collapse; }
+.table th, .table td {
+  border-bottom: 1px solid #eee; padding: 8px; text-align: left; white-space: nowrap;
 }
-.btn-danger:hover {
-  background: #ffdede;
+.table thead th { background:#fafbff; position: sticky; top: 0; z-index: 1; }
+.table input[type="number"] {
+  width: 120px; max-width: 100%;
+  padding: 8px 10px; border:1px solid #dcdde2; border-radius: 8px;
 }
 
 /* 実行ボタン */
@@ -110,6 +111,5 @@ body {
 .kv > div { background:#fafbff; border:1px solid #eef0fa; border-radius: 10px; padding: 10px; }
 .kv span { color:#666; display:block; font-size: 12px; margin-bottom: 4px; }
 .kv .total { grid-column: span 3; }
-
 @media (max-width: 720px){ .kv { grid-template-columns: 1fr 1fr; } .kv .total { grid-column: span 2; } }
 @media (max-width: 420px){ .kv { grid-template-columns: 1fr; } .kv .total { grid-column: span 1; } }

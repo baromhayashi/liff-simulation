@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>テラノペイント シミュレーション</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>電気代削減シミュレーション</h1>
+
+    <div class="form-section">
+        <label for="electricity-bill">過去1年間の月平均電気代 (円):</label>
+        <input type="number" id="electricity-bill" placeholder="例: 100000" required>
+    </div>
+
+    <div class="form-section">
+        <label for="ac-ratio">施設の空調比率 (%):</label>
+        <input type="number" id="ac-ratio" placeholder="例: 60" required>
+    </div>
+
+    <button id="calculate-button">シミュレーション開始</button>
+
+    <div id="result-area" style="display:none;">
+        <h2>シミュレーション結果</h2>
+        <p>月間削減金額: <span id="monthly-saving"></span> 円</p>
+        <p>年間削減金額: <span id="annual-saving"></span> 円</p>
+        <p>投資回収期間: <span id="recovery-period"></span> 年</p>
+    </div>
+
+    <script src="https://static.line-scdn.net/liff/sdk/2.1.0/liff.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

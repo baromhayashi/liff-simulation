@@ -25,12 +25,13 @@
                             <label for="project-name">案件名（正式な施設名）</label>
                             <input type="text" id="project-name" placeholder="例: 〇〇ビルディング" required>
                         </div>
-                        <div class="form-group">
-                            <label for="address">施工希望施設の住所 (交通費算出用)</label>
-                            <input type="text" id="address" placeholder="例: 東京都千代田区" required>
-                        </div>
                     </div>
+
                     <div class="form-section">
+                        <div class="input_title">
+                            <p>過去の電気代情報</p>
+                            <p class="txt_required">必須</p>
+                        </div>
                         <div class="input_select_wrapper">
                             <select id="bill-input-type" class="input_select">
                                 <option value="monthly">月ごと</option>
@@ -48,7 +49,13 @@
                             </div>
                         </div>
                     </div>
-
+                    
+                    <div class="form-section">
+                        <div class="form-group">
+                            <label for="ac-ratio">施設の空調比率 (%)</label>
+                            <input type="number" id="ac-ratio" placeholder="例: 25" min="0" max="100" required>
+                        </div>
+                    </div>
                     <div class="form-section">
                         <div class="input_title">
                             <p>室外機サイズ別台数・設置方角</p>
@@ -63,6 +70,14 @@
                                     <span>＋室外機を追加</span>
                                 </a>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h2>導入費用シミュレーション</h2>
+                        <div class="form-group">
+                            <label for="address">施工希望施設の住所 (交通費算出用)</label>
+                            <input type="text" id="address" placeholder="例: 東京都千代田区" required>
                         </div>
                     </div>
 

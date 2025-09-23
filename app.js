@@ -81,7 +81,6 @@ async function calculateSimulation() {
     const acRatioInput = parseFloat(document.getElementById('ac-ratio').value);
     const address = document.getElementById('address').value;
     
-    // 必須項目のチェック
     if (!clientName || !projectName || !acRatioInput || !address) {
         alert("必須項目をすべて入力してください。");
         return;
@@ -119,13 +118,11 @@ async function calculateSimulation() {
         return;
     }
 
-    // 導入費用の計算
     const unitCosts = { "S": 30000, "M": 40000, "L": 50000, "LL": 60000, "3L": 70000, "4L": 80000, "5L": 90000, "6L": 100000, "7L": 110000, "8L": 120000 };
     let totalInstallationCost = outdoorUnits.reduce((sum, unit) => sum + (unit.count * (unitCosts[unit.size] || 0)), 0);
     const travelCost = 50000;
     totalInstallationCost += travelCost;
 
-    // 各サイズの係数 (α) と節電率の定義
     const alphaFactors = { "S": 1, "M": 1, "L": 2, "LL": 3, "3L": 5, "4L": 8, "5L": 13, "6L": 21, "7L": 34, "8L": 55 };
     const baseSavingRates = { "S": 0.08, "M": 0.12, "L": 0.16, "LL": 0.20, "3L": 0.24, "4L": 0.24, "5L": 0.20, "6L": 0.18, "7L": 0.16, "8L": 0.14 };
     
@@ -153,7 +150,6 @@ async function calculateSimulation() {
             totalBeta += alphaFactors[unit.size] * unit.count;
         });
 
-        // 償却期間算出
         const monthlyCoeffs = [1.019, 1.019, 1.019, 0.934, 0.934, 0.934, 1.085, 1.085, 1.085, 0.934, 0.934, 1.019];
         let totalAnnualSaving = 0;
         const overallSavingRate = (totalWeightedSavingRate / totalUnits) * 100;

@@ -6,68 +6,78 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>テラノペイント シミュレーション</h1>
-
-    <div class="container">
-        <section class="form-section">
-            <h2>基本情報</h2>
-            <div class="form-group">
-                <label for="client-name">クライアント様名（株式会社を含む正式名称）</label>
-                <input type="text" id="client-name" placeholder="例: 株式会社〇〇" required>
+    <div class="main-wrapper">
+        <header>
+            <h1 class="page-title">テラノペイント<br>シミュレーション</h1>
+            <div class="line-btn-wrapper">
+                <a class="line-btn"><span>LINEで送る</span></a>
             </div>
-            <div class="form-group">
-                <label for="project-name">案件名（正式な施設名）</label>
-                <input type="text" id="project-name" placeholder="例: 〇〇ビルディング" required>
-            </div>
-        </section>
+        </header>
+        <main>
+            <div class="form-wrapper">
+                <form id="simulation-form">
+                    <div class="form-section">
+                        <div class="form-group">
+                            <label for="client-name">クライアント様名（株式会社を含む正式名称）</label>
+                            <input type="text" id="client-name" placeholder="例: 株式会社〇〇" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="project-name">案件名（正式な施設名）</label>
+                            <input type="text" id="project-name" placeholder="例: 〇〇ビルディング" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="address">施工希望施設の住所 (交通費算出用)</label>
+                            <input type="text" id="address" placeholder="例: 東京都千代田区" required>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <div class="input_select_wrapper">
+                            <select id="bill-input-type" class="input_select">
+                                <option value="monthly">月ごと</option>
+                                <option value="annual">年間平均</option>
+                            </select>
+                        </div>
+                        <div id="monthly-bill-input">
+                            <ul class="input_list_month">
+                                </ul>
+                        </div>
+                        <div id="annual-bill-input" style="display:none;">
+                            <div class="form-group">
+                                <label for="annual-bill">年間平均電気代 (円)</label>
+                                <input type="number" id="annual-bill" placeholder="例: 100000" min="0" required>
+                            </div>
+                        </div>
+                    </div>
 
-        <section class="form-section">
-            <h2>過去の電気代情報</h2>
-            <div class="form-group">
-                <label>電気代入力方法:</label>
-                <select id="bill-input-type">
-                    <option value="monthly">月ごとに入力</option>
-                    <option value="annual">年間平均で入力</option>
-                </select>
-            </div>
-            <div id="monthly-bill-input">
-                </div>
-            <div id="annual-bill-input" style="display:none;">
-                <div class="form-group">
-                    <label for="annual-bill">年間平均電気代 (円)</label>
-                    <input type="number" id="annual-bill" placeholder="例: 100000" min="0" required>
-                </div>
-            </div>
-        </section>
+                    <div class="form-section">
+                        <div class="input_title">
+                            <p>室外機サイズ別台数・設置方角</p>
+                            <p class="txt_required">必須</p>
+                        </div>
+                        <div class="input_outdoor_wrapper">
+                            <div class="input_outdoor" id="outdoor-unit-container">
+                                </div>
+                            <div class="add-btn-wrapper">
+                                <a id="add-unit-button" class="add-btn">
+                                    <span class="plus-icon">+</span>
+                                    <span>＋室外機を追加</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
 
-        <section class="form-section">
-            <h2>削減金額シミュレーション</h2>
-            <div class="form-group">
-                <label for="ac-ratio">施設の空調比率 (%)</label>
-                <input type="number" id="ac-ratio" placeholder="例: 60" min="0" max="100" required>
+                    <div class="form-btn-wrapper">
+                        <button type="submit" id="calculate-button" class="form-btn">シミュレーション開始</button>
+                    </div>
+                </form>
             </div>
-            
-            <h3 class="subsection-title">室外機台数・設置方角</h3>
-            <div id="outdoor-unit-container">
-                </div>
-            <button id="add-unit-button" class="btn add-btn">＋室外機を追加</button>
-        </section>
 
-        <section class="form-section">
-            <h2>導入費用シミュレーション</h2>
-            <div class="form-group">
-                <label for="address">施工希望施設の住所 (交通費算出用)</label>
-                <input type="text" id="address" placeholder="例: 東京都千代田区" required>
-            </div>
-        </section>
-
-        <button id="calculate-button" class="btn primary-btn">シミュレーション開始</button>
-
-        <section id="result-area" class="result-section" style="display:none;">
-            <h2>シミュレーション結果</h2>
-            <div id="result-content">
-                </div>
-        </section>
+            <section id="result-area" class="result-section" style="display:none;">
+                <h2>シミュレーション結果</h2>
+                <div id="result-content">
+                    </div>
+            </section>
+        </main>
     </div>
 
     <script src="https://static.line-scdn.net/liff/sdk/2.1.0/liff.js"></script>

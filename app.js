@@ -16,21 +16,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeApp() {
-    // フォーム送信ボタンのイベントリスナー
-    document.getElementById('calculate-button').addEventListener('click', calculateSimulation);
+    document.getElementById('simulation-form').addEventListener('submit', (e) => {
+        e.preventDefault(); // フォームのデフォルト送信をキャンセル
+        calculateSimulation();
+    });
 
-    // 室外機追加ボタンのイベントリスナー
     document.getElementById('add-unit-button').addEventListener('click', addOutdoorUnitInput);
-    addOutdoorUnitInput(); // 最初の1つを最初から表示
+    addOutdoorUnitInput();
 
-    // 電気代入力方法の切り替え
     document.getElementById('bill-input-type').addEventListener('change', (event) => {
         const monthlyInputDiv = document.getElementById('monthly-bill-input');
         const annualInputDiv = document.getElementById('annual-bill-input');
         if (event.target.value === 'monthly') {
             monthlyInputDiv.style.display = 'block';
             annualInputDiv.style.display = 'none';
-            generateMonthlyInputs();
         } else {
             monthlyInputDiv.style.display = 'none';
             annualInputDiv.style.display = 'block';
@@ -39,33 +38,36 @@ function initializeApp() {
     generateMonthlyInputs();
 }
 
-// 月ごとの入力欄を生成
 function generateMonthlyInputs() {
-    const container = document.getElementById('monthly-bill-input');
+    const container = document.querySelector('.input_list_month');
     container.innerHTML = '';
     const months = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
     months.forEach(month => {
-        const div = document.createElement('div');
-        div.className = 'form-group monthly-bill';
-        div.innerHTML = `<label for="bill-${month}">${month}の電気代 (円)</label><input type="number" id="bill-${month}" placeholder="例: 10000" min="0">`;
-        container.appendChild(div);
+        const li = document.createElement('li');
+        li.innerHTML = `<label for="bill-${month}">${month}の電気代</label><input type="number" id="bill-${month}" placeholder="0" class="input_half"><span>円</span>`;
+        container.appendChild(li);
     });
 }
 
-// 動的な入力フォームを追加
 function addOutdoorUnitInput() {
     const container = document.getElementById('outdoor-unit-container');
     const unitDiv = document.createElement('div');
-    unitDiv.className = 'outdoor-unit-group';
+    unitDiv.className = 'input_group';
     unitDiv.innerHTML = `
-        <select class="unit-size-select">
-            <option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="LL">LL</option><option value="3L">3L</option><option value="4L">4L</option><option value="5L">5L</option><option value="6L">6L</option><option value="7L">7L</option><option value="8L">8L</option>
-        </select>
-        <input type="number" class="unit-count-input" placeholder="台数" min="0" required>
-        <select class="unit-direction-select">
-            <option value="南">南面</option><option value="北">北面</option><option value="東">東面</option><option value="西">西面</option>
-        </select>
-        <button type="button" class="btn remove-btn">削除</button>
+        <div class="input_half_box">
+            <select class="select_half unit-size-select">
+                <option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="LL">LL</option><option value="3L">3L</option><option value="4L">4L</option><option value="5L">5L</option><option value="6L">6L</option><option value="7L">7L</option><option value="8L">8L</option>
+            </select>
+            <input type="number" class="input_half unit-count-input" placeholder="0" min="0" required>
+            <span>台</span>
+        </div>
+        <div class="input_half_box">
+            <select class="select_half unit-direction-select">
+                <option value="南">南面</option><option value="北">北面</option><option value="東">東面</option><option value="西">西面</option>
+            </select>
+            <span></span>
+        </div>
+        <button type="button" class="btn remove-btn"><span>×</span></button>
     `;
     container.appendChild(unitDiv);
     unitDiv.querySelector('.remove-btn').addEventListener('click', () => {
@@ -74,26 +76,28 @@ function addOutdoorUnitInput() {
 }
 
 async function calculateSimulation() {
-    // ユーザー情報の取得
     const clientName = document.getElementById('client-name').value;
     const projectName = document.getElementById('project-name').value;
     const acRatioInput = parseFloat(document.getElementById('ac-ratio').value);
     const address = document.getElementById('address').value;
-
+    
+    // 必須項目のチェック
+    if (!clientName || !projectName || !acRatioInput || !address) {
+        alert("必須項目をすべて入力してください。");
+        return;
+    }
+    
     let monthlyAvgBill;
     const inputType = document.getElementById('bill-input-type').value;
 
     if (inputType === 'monthly') {
-        const monthlyBills = Array.from(document.querySelectorAll('.monthly-bill input')).map(input => parseFloat(input.value) || 0);
+        const monthlyBills = Array.from(document.querySelectorAll('.input_list_month input')).map(input => parseFloat(input.value) || 0);
         const validMonths = monthlyBills.filter(bill => bill > 0).length;
-        const totalBill = monthlyBills.reduce((sum, bill) => sum + bill, 0);
-        
         if (validMonths === 0) {
             alert("電気代を1ヶ月分以上入力してください。");
             return;
         }
-        
-        monthlyAvgBill = totalBill / validMonths;
+        monthlyAvgBill = monthlyBills.reduce((sum, bill) => sum + bill, 0) / validMonths;
     } else {
         monthlyAvgBill = parseFloat(document.getElementById('annual-bill').value);
     }
@@ -103,18 +107,22 @@ async function calculateSimulation() {
         return;
     }
 
-    const outdoorUnits = Array.from(document.querySelectorAll('.outdoor-unit-group')).map(group => ({
+    const outdoorUnits = Array.from(document.querySelectorAll('.input_outdoor .input_group')).map(group => ({
         size: group.querySelector('.unit-size-select').value,
         count: parseInt(group.querySelector('.unit-count-input').value) || 0,
         direction: group.querySelector('.unit-direction-select').value
     })).filter(unit => unit.count > 0);
 
     const totalUnits = outdoorUnits.reduce((sum, unit) => sum + unit.count, 0);
+    if (totalUnits === 0) {
+        alert("室外機の台数を入力してください。");
+        return;
+    }
 
     // 導入費用の計算
     const unitCosts = { "S": 30000, "M": 40000, "L": 50000, "LL": 60000, "3L": 70000, "4L": 80000, "5L": 90000, "6L": 100000, "7L": 110000, "8L": 120000 };
     let totalInstallationCost = outdoorUnits.reduce((sum, unit) => sum + (unit.count * (unitCosts[unit.size] || 0)), 0);
-    const travelCost = 50000; // 住所からの交通費はAPIが必要なため、仮の値
+    const travelCost = 50000;
     totalInstallationCost += travelCost;
 
     // 各サイズの係数 (α) と節電率の定義

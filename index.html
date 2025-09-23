@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <title>テラノペイント シミュレーション</title>
+  <title>テラノペイント 簡易見積・回収年数シミュレーション</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="format-detection" content="telephone=no" />
   <link rel="stylesheet" href="style.css" />
@@ -10,78 +10,125 @@
 <body>
   <div class="main-wrapper">
     <header>
-      <h1 class="page-title">テラノペイント<br />シミュレーション</h1>
+      <h1 class="page-title">テラノペイント<br />簡易見積・回収年数シミュレーション</h1>
+      <p class="page-note">※簡易見積のため概算です。実月額がある月は実額優先、欠損月は平均×季節係数で補完します。</p>
     </header>
 
     <main>
       <div class="form-wrapper">
         <form id="simulation-form" novalidate>
+          <!-- 基本情報 -->
           <div class="form-section">
             <h2 class="section-title">基本情報</h2>
-            <div class="form-group">
-              <label for="client-name">クライアント様名</label>
-              <input type="text" id="client-name" placeholder="株式会社を含む正式名称を入力" required />
-            </div>
-            <div class="form-group">
-              <label for="project-name">案件名</label>
-              <input type="text" id="project-name" placeholder="正式な施設名を入力" required />
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h2 class="section-title">過去の電気代情報</h2>
-
-            <div class="input-type-wrapper" role="radiogroup" aria-label="電気代入力方法">
-              <label>
-                <input type="radio" name="bill-type" value="monthly" id="radio-monthly" checked />
-                毎月入力
-              </label>
-              <label>
-                <input type="radio" name="bill-type" value="annual" id="radio-annual" />
-                年間平均入力
-              </label>
-            </div>
-
-            <!-- 毎月入力コンテナ -->
-            <div id="monthly-bill-container" class="bill-input-container">
-              <div class="monthly-grid" id="monthly-grid"></div>
-            </div>
-
-            <!-- 年間平均入力コンテナ -->
-            <div id="annual-bill-container" class="bill-input-container" style="display: none;">
+            <div class="grid-2">
               <div class="form-group">
-                <label for="annual-bill">年間平均電気代 (円)</label>
-                <input type="number" id="annual-bill" placeholder="100000" min="0" inputmode="numeric" />
+                <label for="client-name">クライアント様名</label>
+                <input type="text" id="client-name" placeholder="株式会社〇〇 など" required />
+              </div>
+              <div class="form-group">
+                <label for="project-name">案件名</label>
+                <input type="text" id="project-name" placeholder="施設名など" required />
               </div>
             </div>
           </div>
 
+          <!-- 電気代入力 -->
           <div class="form-section">
-            <h2 class="section-title">空調比率</h2>
+            <h2 class="section-title">過去の電気代情報（直近12か月）</h2>
+
+            <div class="input-type-wrapper" role="radiogroup" aria-label="電気代入力方法">
+              <label><input type="radio" name="bill-type" value="monthly" id="radio-monthly" checked /> 毎月入力</label>
+              <label><input type="radio" name="bill-type" value="annual" id="radio-annual" /> 年間平均入力</label>
+            </div>
+
+            <!-- 毎月入力 -->
+            <div id="monthly-bill-container" class="bill-input-container">
+              <div class="monthly-grid" id="monthly-grid"></div>
+            </div>
+
+            <!-- 年間平均 -->
+            <div id="annual-bill-container" class="bill-input-container" style="display:none;">
+              <div class="form-group">
+                <label for="annual-bill">年間平均電気代（1か月あたり）【円】</label>
+                <input type="number" id="annual-bill" placeholder="例：100000" min="0" inputmode="numeric" />
+              </div>
+            </div>
+
             <div class="form-group">
-              <label for="ac-ratio">空調比率 (%)</label>
-              <input type="number" id="ac-ratio" placeholder="例: 25" min="0" max="100" required />
+              <label for="ac-ratio">空調比率【%】（小数1桁まで）</label>
+              <input type="number" id="ac-ratio" placeholder="例：25" min="0" max="100" step="0.1" required />
+              <small>※計算は「−5%／±0%／+5%」の3パターン（0〜100%に丸め）</small>
             </div>
           </div>
 
+          <!-- 既設台数（削減額用：サイズ×方角） -->
           <div class="form-section">
-            <h2 class="section-title">屋外機情報</h2>
-            <div id="outdoor-unit-container"></div>
-            <button type="button" id="add-outdoor-unit" class="btn">屋外機を追加</button>
+            <h2 class="section-title">既設 室外機台数（削減額の計算に使用）</h2>
+            <p class="section-help">サイズ×方角（南/北/東/西）の台数を入力してください。方角ごとの<u>台数の合計がサイズ合計</u>になるようにします。</p>
+            <div id="existing-table"></div>
+          </div>
+
+          <!-- 施工希望台数（費用用：サイズ合計） -->
+          <div class="form-section">
+            <h2 class="section-title">施工希望台数（導入費用の計算に使用）</h2>
+            <div id="desired-table"></div>
+          </div>
+
+          <!-- 交通・距離 -->
+          <div class="form-section">
+            <h2 class="section-title">交通・宿泊・諸費用の前提</h2>
+            <div class="grid-3">
+              <div class="form-group">
+                <label for="distance-km">片道距離【km】（手入力）</label>
+                <input type="number" id="distance-km" placeholder="例：50" min="0" step="0.1" />
+                <small>走行費は 17円/km（170円/L・10km/L）／車両1台／日毎に往復</small>
+              </div>
+              <div class="form-group">
+                <label for="fuel-cost">燃料単価【円/L】</label>
+                <input type="number" id="fuel-cost" value="170" min="0" />
+              </div>
+              <div class="form-group">
+                <label for="fuel-eff">燃費【km/L】</label>
+                <input type="number" id="fuel-eff" value="10" min="0.1" step="0.1" />
+              </div>
+            </div>
+            <div class="grid-3">
+              <div class="form-group">
+                <label for="lodging-perperson">宿泊費 単価（1人1泊）【円】</label>
+                <input type="number" id="lodging-perperson" value="10000" min="0" />
+                <small>泊数＝max(施工日数−1,0)</small>
+              </div>
+              <div class="form-group">
+                <label>清掃・養生費【円】</label>
+                <input type="text" value="1日=80,000円 / 2日以上=100,000円（固定）" disabled />
+              </div>
+              <div class="form-group">
+                <label>予備費【円】</label>
+                <input type="text" value="60,000円 + 10,000円 × 施工日数（固定）" disabled />
+              </div>
+            </div>
+          </div>
+
+          <!-- 価格・面積 上限の設定 -->
+          <div class="form-section">
+            <h2 class="section-title">サイズ別 価格・面積上限（税別）</h2>
+            <p class="section-help">「施工価格早見表」の値を入力してください。未入力は0として扱います。</p>
+            <div id="price-area-table"></div>
           </div>
 
           <button type="submit" id="calculate-button" class="form-btn">シミュレーション実行</button>
         </form>
       </div>
 
-      <section id="result-area" class="result-section" style="display: none;">
-        <h2>シミュレーション結果</h2>
+      <!-- 結果 -->
+      <section id="result-area" class="result-section" style="display:none;">
+        <h2>結果</h2>
         <div id="result-content"></div>
       </section>
     </main>
   </div>
 
-  <!-- LIFF SDK（LINE上で利用する場合） -->
+  <!-- LIFF SDK（LINE上利用時） -->
   <script src="https://static.line-scdn.net/liff/sdk/2.1.0/liff.js"></script>
   <script src="app.js"></script>
 </body>

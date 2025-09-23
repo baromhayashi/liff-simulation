@@ -1,30 +1,119 @@
-/* style.cssというファイル名で保存してください */
 body {
     font-family: sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    padding: 0;
+    margin: 0;
+}
+
+.main-wrapper {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: #fff;
     padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+header {
+    text-align: center;
+    padding-bottom: 20px;
+}
+
+.page-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #4CAF50;
+    margin: 0;
 }
 
 .form-section {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #008CBA;
     margin-bottom: 15px;
 }
 
-input[type="number"] {
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+input[type="text"],
+input[type="number"],
+select {
     width: 100%;
-    padding: 8px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
     box-sizing: border-box;
 }
 
-button {
-    width: 100%;
-    padding: 10px;
-    background-color: #00B900;
+.input-type-wrapper {
+    margin-bottom: 15px;
+}
+
+.monthly-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+}
+
+.monthly-grid .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.monthly-grid input {
+    text-align: right;
+}
+
+.outdoor-unit-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.remove-btn {
+    background-color: #f44336;
     color: white;
     border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
     cursor: pointer;
 }
 
-#result-area {
-    margin-top: 20px;
-    padding: 15px;
-    border: 1px solid #ccc;
+.btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border-radius: 5px;
+    text-align: center;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
 }
+
+.add-unit-btn {
+    background-color: #4CAF50;
+    margin-top: 10px;
+}
+
+.form-btn {
+    background-color: #008CBA;
+    margin-top: 20px;
+}
+
+/* その他のスタイル */

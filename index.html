@@ -61,11 +61,17 @@
             </div>
           </div>
 
-          <!-- 既設台数（削減額用：サイズ×方角） -->
+          <!-- 既設 室外機（行追加式：サイズ/台数/方角） -->
           <div class="form-section">
-            <h2 class="section-title">既設 室外機台数（削減額の計算に使用）</h2>
-            <p class="section-help">サイズ×方角（南/北/東/西）の台数を入力してください。方角ごとの<u>台数の合計がサイズ合計</u>になるようにします。</p>
-            <div id="existing-table"></div>
+            <h2 class="section-title">室外機サイズ別台数・設置方角（削減額の計算に使用）</h2>
+            <p class="section-help">サイズ・台数・設置方角の組み合わせを必要数追加してください。</p>
+
+            <div id="existing-list"></div>
+
+            <div class="btn-row">
+              <button type="button" class="btn" id="add-existing-row">＋ 室外機を追加</button>
+            </div>
+            <small>※同じサイズ・方角の行は複数追加可能です（計算時に合算されます）。</small>
           </div>
 
           <!-- 施工希望台数（費用用：サイズ合計） -->

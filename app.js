@@ -27,10 +27,15 @@ const MONTH_COEF = {
   10:0.934, 11:0.934, 12:1.019
 };
 
-// 丸め規則
+// 丸め規則（表示直前に適用）
 const ceilMoney = (x) => Math.ceil(x);
 const roundPct1  = (x) => Math.round(x * 10) / 10; // 小数1桁四捨五入
 const ceilMonths = (x) => Math.ceil(x);
+
+// =========================
+// 既設：行追加式データ
+// =========================
+let existingRows = []; // {id, size, count, orientation}
 
 // =========================
 // 初期化
@@ -39,7 +44,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderMonthlyInputs();
   setupBillTypeToggle();
 
-  renderExistingTable();
+  renderExistingList();
+  document.getElementById("add-existing-row").addEventListener("click", addExistingRow);
+
   renderDesiredTable();
   renderPriceAreaTable();
 
@@ -92,41 +99,80 @@ function setupBillTypeToggle(){
   update();
 }
 
-function renderExistingTable(){
-  const host = document.getElementById("existing-table");
+// ===== 既設：行追加式 =====
+function renderExistingList(){
+  const host = document.getElementById("existing-list");
   host.innerHTML = `
-    <div class="table-scroll">
-      <table class="table">
-        <thead>
-          <tr><th>サイズ</th><th>南</th><th>北</th><th>東</th><th>西</th><th>合計</th></tr>
-        </thead>
-        <tbody>
-          ${SIZES.map(sz => `
-            <tr>
-              <td>${sz}</td>
-              <td><input type="number" min="0" id="ex-${sz}-南" value="0" /></td>
-              <td><input type="number" min="0" id="ex-${sz}-北" value="0" /></td>
-              <td><input type="number" min="0" id="ex-${sz}-東" value="0" /></td>
-              <td><input type="number" min="0" id="ex-${sz}-西" value="0" /></td>
-              <td><input type="number" min="0" id="ex-${sz}-sum" value="0" disabled /></td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>
-    <small>※各行の方角合計は自動計算し、矛盾があれば警告します。</small>
+    <div id="existing-rows"></div>
   `;
-  // 合計の自動更新
-  SIZES.forEach(sz => {
-    ["南","北","東","西"].forEach(o => {
-      document.getElementById(`ex-${sz}-${o}`).addEventListener("input", () => {
-        const s = ["南","北","東","西"].reduce((acc, oo) => acc + (+val(`ex-${sz}-${oo}`) || 0), 0);
-        document.getElementById(`ex-${sz}-sum`).value = s;
-      });
+  existingRows = []; // 初期化
+  // 初期行を1つ
+  addExistingRow();
+}
+
+function addExistingRow(){
+  const id = cryptoRandomId();
+  existingRows.push({ id, size: "S", count: 1, orientation: "南" });
+  paintExistingRows();
+}
+
+function removeExistingRow(id){
+  existingRows = existingRows.filter(r => r.id !== id);
+  paintExistingRows();
+}
+
+function paintExistingRows(){
+  const wrap = document.getElementById("existing-rows");
+  wrap.innerHTML = existingRows.map(r => existingRowHtml(r)).join("");
+  // イベント付与
+  existingRows.forEach(r => {
+    const sizeSel = document.getElementById(`ex-size-${r.id}`);
+    const countInp = document.getElementById(`ex-count-${r.id}`);
+    const oriSel = document.getElementById(`ex-ori-${r.id}`);
+    const delBtn = document.getElementById(`ex-del-${r.id}`);
+
+    sizeSel.addEventListener("change", e => {
+      r.size = e.target.value;
     });
+    countInp.addEventListener("input", e => {
+      const v = Math.max(0, +e.target.value || 0);
+      r.count = v;
+      e.target.value = v;
+    });
+    oriSel.addEventListener("change", e => {
+      r.orientation = e.target.value;
+    });
+    delBtn.addEventListener("click", () => removeExistingRow(r.id));
   });
 }
 
+function existingRowHtml(r){
+  return `
+    <div class="row existing-row" id="row-${r.id}">
+      <div class="cell">
+        <label>サイズ</label>
+        <select id="ex-size-${r.id}">
+          ${SIZES.map(sz => `<option value="${sz}" ${sz===r.size?'selected':''}>${sz}</option>`).join("")}
+        </select>
+      </div>
+      <div class="cell">
+        <label>台数</label>
+        <input type="number" id="ex-count-${r.id}" min="0" value="${r.count}" />
+      </div>
+      <div class="cell">
+        <label>設置方角</label>
+        <select id="ex-ori-${r.id}">
+          ${["南","北","東","西"].map(o => `<option value="${o}" ${o===r.orientation?'selected':''}>${o}面</option>`).join("")}
+        </select>
+      </div>
+      <div class="cell actions">
+        <button type="button" class="btn btn-danger" id="ex-del-${r.id}">削除</button>
+      </div>
+    </div>
+  `;
+}
+
+// ===== 施工希望台数 =====
 function renderDesiredTable(){
   const host = document.getElementById("desired-table");
   host.innerHTML = `
@@ -146,6 +192,7 @@ function renderDesiredTable(){
   `;
 }
 
+// ===== 価格・面積上限 =====
 function renderPriceAreaTable(){
   const host = document.getElementById("price-area-table");
   host.innerHTML = `
@@ -169,7 +216,7 @@ function renderPriceAreaTable(){
 }
 
 // =========================
-// 送信
+/* 送信 */
 // =========================
 function onSubmit(e){
   e.preventDefault();
@@ -217,21 +264,12 @@ function onSubmit(e){
     clampPct(acBase + 5),
   ];
 
-  // --- 既設 台数入力の取得（サイズ×方角） ---
-  const existing = {};
-  for (const sz of SIZES){
-    existing[sz] = {};
-    let sum = 0;
-    for (const o of ["南","北","東","西"]){
-      const n = Math.max(0, +val(`ex-${sz}-${o}`) || 0);
-      existing[sz][o] = n;
-      sum += n;
-    }
-    const cellSum = +val(`ex-${sz}-sum`);
-    if (cellSum !== sum){
-      alert(`既設台数：サイズ ${sz} の方角合計が一致しません（計算:${sum} ≠ 表示:${cellSum}）。修正してください。`);
-      return;
-    }
+  // --- 既設（行）→ サイズ×方角 集計 ---
+  const existing = aggregateExistingRows(existingRows);
+  const totalUnitsAll = SIZES.reduce((acc, sz) => acc + sumOrient(existing[sz] || {}), 0);
+  if (totalUnitsAll === 0){
+    alert("室外機サイズ別台数・設置方角を1件以上入力してください。");
+    return;
   }
 
   // --- 施工希望 台数 ---
@@ -257,16 +295,10 @@ function onSubmit(e){
     // 空調費（月） = 月間平均電気代 × 空調比率
     const acCostMonthly = avgBill * (acPct/100);
 
-    // 台数比率 → サイズ補正
-    const totalUnits = SIZES.reduce((acc, sz) => {
-      const s = sumOrient(existing[sz]);
-      return acc + s;
-    }, 0);
+    // 台数比率 → 定数β
+    const totalUnits = SIZES.reduce((acc, sz) => acc + sumOrient(existing[sz] || {}), 0);
+    const validSizes = SIZES.filter(sz => sumOrient(existing[sz] || {}) > 0);
 
-    // 「設置台数が0のサイズは抜き」
-    const validSizes = SIZES.filter(sz => sumOrient(existing[sz]) > 0);
-
-    // 定数β
     const beta = {};
     let betaTotal = 0;
     for (const sz of validSizes){
@@ -344,23 +376,23 @@ function onSubmit(e){
   // 生産性：8.4㎡ / 人・日（=16.8㎡ / 2人・日）
   const personDaysNeeded = totalArea>0 ? Math.ceil(totalArea / 8.4) : 0;
 
-  // 人数（上限4人、下限1人。現実運用のため最低2人にしたい場合はMath.max(2,...)へ変更可）
-  const crew = Math.min(4, Math.max(1, personDaysNeeded)); // 需要が少ない日でも最低1人
+  // 人数（上限4人、下限1人）
+  const crew = Math.min(4, Math.max(1, personDaysNeeded));
 
   // 施工日数 = ceil(必要な人日 / 人数)
   const workDays = personDaysNeeded>0 ? Math.ceil(personDaysNeeded / crew) : 0;
 
-  // 清掃・養生費
+  // 清掃・養生費（固定）
   const cleanFee = workDays <= 1 ? 80000 : 100000;
 
-  // 予備費
+  // 予備費（固定式）
   const miscFee = 60000 + 10000 * workDays;
 
   // 交通費：日毎に往復、車両1台、燃費・燃料単価から 1kmあたり(燃料単価/燃費)
   const perKmCost = fuelCost / fuelEff; // 例：17円/km
   const transport = (distanceKm * 2) * workDays * perKmCost;
 
-  // 宿泊費：泊数 = max(日数−1,0) × 人数 × 10,000
+  // 宿泊費：泊数 = max(日数−1,0) × 人数 × 10,000（既定）
   const nights = Math.max(workDays - 1, 0);
   const lodgingUnit = Math.max(0, +val("lodging-perperson") || 10000);
   const lodging = nights * crew * lodgingUnit;
@@ -441,12 +473,35 @@ function onSubmit(e){
 // ヘルパ
 // =========================
 function val(id){ return document.getElementById(id).value; }
+
 function sumOrient(obj){ return ["南","北","東","西"].reduce((a,o)=>a + (obj[o]||0), 0); }
+
 function clampPct(x){
   if (isNaN(x)) return 0;
   return Math.max(0, Math.min(100, x));
 }
+
 function fmtYen(x){
   const n = ceilMoney(+x || 0);
   return n.toLocaleString("ja-JP") + " 円";
+}
+
+function cryptoRandomId(){
+  // 簡易ID（ブラウザ対応のため）
+  return 'xxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16));
+}
+
+/** 行式 -> サイズ×方角に集計 */
+function aggregateExistingRows(rows){
+  const agg = {};
+  SIZES.forEach(sz => { agg[sz] = { 南:0, 北:0, 東:0, 西:0 }; });
+  rows.forEach(r => {
+    const sz = r.size;
+    const ori = r.orientation;
+    const c = Math.max(0, Number(r.count) || 0);
+    if (!agg[sz]) agg[sz] = { 南:0, 北:0, 東:0, 西:0 };
+    if (!agg[sz][ori] && agg[sz][ori] !== 0) agg[sz][ori] = 0;
+    agg[sz][ori] += c;
+  });
+  return agg;
 }

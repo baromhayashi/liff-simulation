@@ -52,12 +52,16 @@ body {
 }
 
 /* ラジオ切替 */
+.input-type-wrapper {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
 .input-type-wrapper label {
   font-weight: normal;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-right: 16px;
   cursor: pointer;
 }
 .input-type-wrapper input[type="radio"] {
@@ -116,3 +120,13 @@ body {
 }
 .result-row:last-child { border-bottom: none; }
 .result-row span { color: #666; }
+
+/* 小画面最適化 */
+@media (max-width: 420px) {
+  .monthly-grid {
+    grid-template-columns: 1fr;
+  }
+  .outdoor-unit-group {
+    grid-template-columns: 1fr;
+  }
+}

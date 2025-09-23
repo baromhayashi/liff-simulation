@@ -1,39 +1,42 @@
-// 2008161460-54GYvJ9x
-// -------------- 設定 --------------
-const LIFF_ID = "YOUR_LIFF_ID_HERE"; // 本番は環境に合わせて設定
+// =========================
+// 設定
+// =========================
+const LIFF_ID = "YOUR_LIFF_ID_HERE"; // 2008161460-54GYvJ9x
 
-// -------------- 初期化 --------------
+// =========================
+/* 初期化 */
+// =========================
 document.addEventListener("DOMContentLoaded", async () => {
-  // 月別入力欄を先に用意（LIFF未ログインでもUIは動く）
+  // 1) UI 初期化（LIFF とは独立させる）
   generateMonthlyInputs();
-
-  // ラジオ切り替えのハンドラ登録
   setupBillTypeToggle();
 
-  // 屋外機追加ボタン
-  document.getElementById("add-outdoor-unit").addEventListener("click", addOutdoorUnitInput);
+  document
+    .getElementById("add-outdoor-unit")
+    .addEventListener("click", addOutdoorUnitInput);
 
-  // 送信処理
-  document.getElementById("simulation-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    calculateSimulation();
-  });
+  document
+    .getElementById("simulation-form")
+    .addEventListener("submit", (e) => {
+      e.preventDefault();
+      calculateSimulation();
+    });
 
-  // LIFFが使える環境なら初期化（UI表示とは独立）
+  // 2) LIFF 初期化（失敗しても画面は出る）
   if (window.liff && LIFF_ID && LIFF_ID !== "YOUR_LIFF_ID_HERE") {
     try {
       await liff.init({ liffId: LIFF_ID });
-      if (!liff.isLoggedIn()) {
-        // ログインさせたい場合のみ有効化
-        // liff.login();
-      }
+      // 必要に応じてログイン誘導
+      // if (!liff.isLoggedIn()) liff.login();
     } catch (err) {
       console.error("LIFF initialization failed:", err);
     }
   }
 });
 
-// -------------- 入力UI：電気代 --------------
+// =========================
+/* 入力UI：電気代 */
+// =========================
 function setupBillTypeToggle() {
   const monthlyRadio = document.getElementById("radio-monthly");
   const annualRadio = document.getElementById("radio-annual");
@@ -57,6 +60,7 @@ function setupBillTypeToggle() {
 
 function generateMonthlyInputs() {
   const container = document.getElementById("monthly-grid");
+  if (!container) return;
   container.innerHTML = "";
 
   const months = [
@@ -76,7 +80,9 @@ function generateMonthlyInputs() {
   });
 }
 
-// -------------- 入力UI：屋外機 --------------
+// =========================
+/* 入力UI：屋外機 */
+// =========================
 function addOutdoorUnitInput() {
   const container = document.getElementById("outdoor-unit-container");
   const unitDiv = document.createElement("div");
@@ -115,9 +121,10 @@ function addOutdoorUnitInput() {
   });
 }
 
-// -------------- 計算（ダミー実装例） --------------
+// =========================
+/* 計算（ダミー実装例） */
+// =========================
 function calculateSimulation() {
-  // 必須チェック（例：クライアント名・案件名・空調比率）
   const client = document.getElementById("client-name").value.trim();
   const project = document.getElementById("project-name").value.trim();
   const acRatio = Number(document.getElementById("ac-ratio").value);
@@ -141,7 +148,7 @@ function calculateSimulation() {
     monthlyBills = Array(12).fill(avg);
   }
 
-  // ここに実際の計算ロジックを実装
+  // 簡易ロジック（必要に応じて実数値に置換）
   const annual = monthlyBills.reduce((a, b) => a + b, 0);
   const savingRate = Math.max(0, Math.min(100, acRatio)) / 100; // 仮の節約率＝空調比率
   const estimatedSaving = Math.round(annual * savingRate * 0.2); // 仮：空調由来の20%削減

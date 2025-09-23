@@ -9,7 +9,7 @@
     <div class="main-wrapper">
         <header>
             <h1 class="page-title">テラノペイント<br>シミュレーション</h1>
-            </header>
+        </header>
         <main>
             <div class="form-wrapper">
                 <form id="simulation-form">
@@ -37,10 +37,13 @@
                                 年間平均入力
                             </label>
                         </div>
+
+                        <!-- 毎月入力フォーム -->
                         <div id="monthly-bill-container" class="bill-input-container">
-                            <div class="monthly-grid">
-                                </div>
+                            <div class="monthly-grid"></div>
                         </div>
+
+                        <!-- 年間平均入力フォーム -->
                         <div id="annual-bill-container" class="bill-input-container" style="display: none;">
                             <div class="form-group">
                                 <label for="annual-bill">年間平均電気代 (円)</label>
@@ -59,15 +62,14 @@
 
                     <div class="form-section">
                         <h2 class="section-title">室外機サイズ別台数・設置方角</h2>
-                        <div id="outdoor-unit-container">
-                             </div>
+                        <div id="outdoor-unit-container"></div>
                         <button type="button" id="add-unit-button" class="btn add-unit-btn">+ 室外機を追加</button>
                     </div>
 
                     <div class="form-section">
                         <h2 class="section-title">導入費用</h2>
                         <div class="form-group">
-                            <label for="address">見積金額 (税抜)</label>
+                            <label for="estimated-cost">見積金額 (税抜)</label>
                             <input type="number" id="estimated-cost" placeholder="円" required>
                         </div>
                     </div>
@@ -78,11 +80,12 @@
 
             <section id="result-area" class="result-section" style="display: none;">
                 <h2>シミュレーション結果</h2>
-                <div id="result-content">
-                    </div>
+                <div id="result-content"></div>
             </section>
         </main>
     </div>
+
+    <!-- LIFF SDK（LINE上で動作する場合）-->
     <script src="https://static.line-scdn.net/liff/sdk/2.1.0/liff.js"></script>
     <script src="app.js"></script>
 </body>

@@ -3,27 +3,44 @@
 <head>
     <title>テラノペイント シミュレーション</title>
     <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-    <h1>電気代削減シミュレーション</h1>
+    <h1>テラノペイント シミュレーション</h1>
 
-    <div class="form-section">
-        <label for="electricity-bill">過去1年間の月平均電気代 (円):</label>
-        <input type="number" id="electricity-bill" placeholder="例: 100000" required>
-    </div>
+    <div class="container">
+        <section class="form-section">
+            <h2>削減金額シミュレーション</h2>
+            <div class="form-group">
+                <label for="electricity-bill">過去1年間の月平均電気代 (円)</label>
+                <input type="number" id="electricity-bill" placeholder="例: 100000" required>
+            </div>
+            <div class="form-group">
+                <label for="ac-ratio">施設の空調比率 (%)</label>
+                <input type="number" id="ac-ratio" placeholder="例: 60" required>
+            </div>
+            
+            <h3 class="subsection-title">室外機台数・設置方角</h3>
+            <div id="outdoor-unit-container">
+                </div>
+            <button id="add-unit-button" class="btn add-btn">室外機を追加</button>
+        </section>
 
-    <div class="form-section">
-        <label for="ac-ratio">施設の空調比率 (%):</label>
-        <input type="number" id="ac-ratio" placeholder="例: 60" required>
-    </div>
+        <section class="form-section">
+            <h2>導入費用シミュレーション</h2>
+            <div class="form-group">
+                <label for="address">施工希望施設の住所 (交通費算出用)</label>
+                <input type="text" id="address" placeholder="例: 東京都千代田区" required>
+            </div>
+        </section>
 
-    <button id="calculate-button">シミュレーション開始</button>
+        <button id="calculate-button" class="btn primary-btn">シミュレーション開始</button>
 
-    <div id="result-area" style="display:none;">
-        <h2>シミュレーション結果</h2>
-        <p>月間削減金額: <span id="monthly-saving"></span> 円</p>
-        <p>年間削減金額: <span id="annual-saving"></span> 円</p>
-        <p>投資回収期間: <span id="recovery-period"></span> 年</p>
+        <section id="result-area" class="result-section" style="display:none;">
+            <h2>シミュレーション結果</h2>
+            <div id="result-content">
+                </div>
+        </section>
     </div>
 
     <script src="https://static.line-scdn.net/liff/sdk/2.1.0/liff.js"></script>

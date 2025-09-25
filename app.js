@@ -29,18 +29,18 @@ const MONTH_COEF = {
 
 // 丸め規則（表示直前に適用）
 const ceilMoney = (x) => Math.ceil(x);
-const roundPct1  = (x) => Math.round(x * 10) / 10; // 小数1桁四捨五入
+const roundPct1  = (x) => Math.round(x * 10) / 10;
 const ceilMonths = (x) => Math.ceil(x);
 
-// ▼「施工価格早見表」の固定テーブル（税別）※ご提示値を採用
-const PRICE = { // 単価[円/台]
+// 施工価格・面積上限（固定：ご提示値）
+const PRICE = {
   S:16000, M:26000, L:34000, LL:54000, "3L":84000, "4L":92000, "5L":132000, "6L":154000, "7L":178000, "8L":206000
 };
-const AREA = {  // 面積上限[㎡/台]
+const AREA = {
   S:0.8, M:1.3, L:1.7, LL:2.7, "3L":4.2, "4L":4.6, "5L":6.6, "6L":7.7, "7L":8.9, "8L":10.3
 };
 
-// 既設：行追加式データ
+// 既設・施工希望（行追加式）
 let existingRows = []; // {id, size, count, orientation}
 let desiredRows  = []; // {id, size, count}
 
@@ -112,21 +112,18 @@ function setupBillTypeToggle(){
 function renderExistingList(){
   const host = document.getElementById("existing-list");
   host.innerHTML = `<div id="existing-rows"></div>`;
-  existingRows = []; // 初期化
-  addExistingRow();  // 初期行
+  existingRows = [];
+  addExistingRow();
 }
-
 function addExistingRow(){
   const id = cryptoRandomId();
   existingRows.push({ id, size: "S", count: 1, orientation: "南" });
   paintExistingRows();
 }
-
 function removeExistingRow(id){
   existingRows = existingRows.filter(r => r.id !== id);
   paintExistingRows();
 }
-
 function paintExistingRows(){
   const wrap = document.getElementById("existing-rows");
   wrap.innerHTML = existingRows.map(r => `
@@ -156,14 +153,10 @@ function paintExistingRows(){
     </div>
   `).join("");
 
-  // イベント付与
   existingRows.forEach(r => {
     qs(`#ex-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
-    qs(`#ex-count-${r.id}`).addEventListener("input", e => {
-      const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v;
-    });
+    qs(`#ex-count-${r.id}`).addEventListener("input", e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });
     qs(`#ex-ori-${r.id}`).addEventListener("change", e => r.orientation = e.target.value);
-    // どちらの削除ボタンでも削除できるように
     qs(`#ex-del-${r.id}`).addEventListener("click", () => removeExistingRow(r.id));
     qs(`#ex-del-dup-${r.id}`).addEventListener("click", () => removeExistingRow(r.id));
   });
@@ -173,21 +166,18 @@ function paintExistingRows(){
 function renderDesiredList(){
   const host = document.getElementById("desired-list");
   host.innerHTML = `<div id="desired-rows"></div>`;
-  desiredRows = []; // 初期化
-  addDesiredRow();  // 初期行（表示済みの状態）
+  desiredRows = [];
+  addDesiredRow();
 }
-
 function addDesiredRow(){
   const id = cryptoRandomId();
   desiredRows.push({ id, size: "S", count: 1 });
   paintDesiredRows();
 }
-
 function removeDesiredRow(id){
   desiredRows = desiredRows.filter(r => r.id !== id);
   paintDesiredRows();
 }
-
 function paintDesiredRows(){
   const wrap = document.getElementById("desired-rows");
   wrap.innerHTML = desiredRows.map(r => `
@@ -208,18 +198,15 @@ function paintDesiredRows(){
     </div>
   `).join("");
 
-  // イベント付与
   desiredRows.forEach(r => {
     qs(`#des-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
-    qs(`#des-count-${r.id}`).addEventListener("input", e => {
-      const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v;
-    });
+    qs(`#des-count-${r.id}`).addEventListener("input", e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });
     qs(`#des-del-${r.id}`).addEventListener("click", () => removeDesiredRow(r.id));
   });
 }
 
 // =========================
-/* 送信（計算ロジックは前回と同じ） */
+// 送信（計算ロジックは現行踏襲）
 // =========================
 function onSubmit(e){
   e.preventDefault();
@@ -231,37 +218,27 @@ function onSubmit(e){
     return;
   }
 
-  // --- 電気代 ---
+  // 電気代
   const monthlyMode = qs("#radio-monthly").checked;
   let monthlyBills = [];
   if (monthlyMode){
-    for (let m=1; m<=12; m++){
-      const v = +gv(`bill-${m}`) || 0;
-      monthlyBills.push(v);
-    }
+    for (let m=1; m<=12; m++){ monthlyBills.push(+gv(`bill-${m}`) || 0); }
   } else {
     const avg = +gv("annual-bill") || 0;
     monthlyBills = Array(12).fill(avg);
   }
 
   const provided = monthlyBills.filter(v => v>0);
-  const monthlyAvg = provided.length>0
-    ? (provided.reduce((a,b)=>a+b,0) / provided.length)
-    : 0;
+  const monthlyAvg = provided.length>0 ? (provided.reduce((a,b)=>a+b,0) / provided.length) : 0;
 
-  const completedBills = monthlyBills.map((v, idx) => {
-    if (v>0) return v;
-    const m = idx+1;
-    return monthlyAvg * MONTH_COEF[m];
-  });
+  const completedBills = monthlyBills.map((v, idx) => v>0 ? v : monthlyAvg * MONTH_COEF[idx+1]);
+  const avgBill = completedBills.reduce((a,b)=>a+b,0) / 12;
 
-  const avgBill = completedBills.reduce((a,b)=>a+b,0) / 12; // 真の月間平均
-
-  // --- 空調比率（3パターン） ---
+  // 空調比率（3パターン）
   const acBase = clampPct(+gv("ac-ratio"));
   const acVariants = [ clampPct(acBase-5), acBase, clampPct(acBase+5) ];
 
-  // --- 既設（行）→ サイズ×方角 集計 ---
+  // 既設 → サイズ×方角集計
   const existing = aggregateExistingRows(existingRows);
   const totalUnitsAll = SIZES.reduce((acc, sz) => acc + sumOrient(existing[sz] || {}), 0);
   if (totalUnitsAll === 0){
@@ -269,18 +246,16 @@ function onSubmit(e){
     return;
   }
 
-  // --- 施工希望（行）→ サイズ合計 集計 ---
+  // 施工希望 → サイズ合計集計
   const desired = aggregateDesiredRows(desiredRows);
 
-  // ========== 削減額計算 ==========
+  // 削減額（3パターン）
   const scenarios = acVariants.map(acPct => {
     const acCostMonthly = avgBill * (acPct/100);
-
     const totalUnits = SIZES.reduce((acc, sz) => acc + sumOrient(existing[sz] || {}), 0);
     const validSizes = SIZES.filter(sz => sumOrient(existing[sz] || {}) > 0);
 
-    const beta = {};
-    let betaTotal = 0;
+    const beta = {}; let betaTotal = 0;
     for (const sz of validSizes){
       const units  = sumOrient(existing[sz]);
       const ratio  = units / totalUnits * 100;
@@ -288,21 +263,13 @@ function onSubmit(e){
       betaTotal   += beta[sz];
     }
 
-    const sizeAdj = {};
-    for (const sz of validSizes){
-      sizeAdj[sz] = beta[sz] / (betaTotal || 1) * 100;
-    }
-
-    const sizeMonthlyCost = {};
-    for (const sz of validSizes){
-      sizeMonthlyCost[sz] = acCostMonthly * (sizeAdj[sz]/100);
-    }
+    const sizeAdj = {}; for (const sz of validSizes){ sizeAdj[sz] = beta[sz] / (betaTotal || 1) * 100; }
+    const sizeMonthlyCost = {}; for (const sz of validSizes){ sizeMonthlyCost[sz] = acCostMonthly * (sizeAdj[sz]/100); }
 
     const sizeWeightedRate = {};
     for (const sz of validSizes){
       const base = BASE_SAVING_RATE[sz] || 0;
-      const counts = existing[sz];
-      const total = sumOrient(counts);
+      const counts = existing[sz]; const total = sumOrient(counts);
       let sumRates = 0;
       for (const o of ["南","北","東","西"]){
         const n = counts[o] || 0;
@@ -311,30 +278,18 @@ function onSubmit(e){
       sizeWeightedRate[sz] = total>0 ? (sumRates / total) : 0;
     }
 
-    const sizeSaving = {};
-    for (const sz of validSizes){
-      sizeSaving[sz] = sizeMonthlyCost[sz] * (sizeWeightedRate[sz]/100);
-    }
-
+    const sizeSaving = {}; for (const sz of validSizes){ sizeSaving[sz] = sizeMonthlyCost[sz] * (sizeWeightedRate[sz]/100); }
     const totalSaving = Object.values(sizeSaving).reduce((a,b)=>a+b,0);
     const totalSavingPct = avgBill>0 ? (totalSaving / avgBill * 100) : 0;
 
     let annualSaving = 0;
-    for (let m=1; m<=12; m++){
-      const monthBase = avgBill * (MONTH_COEF[m] || 1);
-      annualSaving += monthBase * (totalSavingPct/100);
-    }
+    for (let m=1; m<=12; m++){ annualSaving += (avgBill * (MONTH_COEF[m] || 1)) * (totalSavingPct/100); }
     const monthlySavingAvg = annualSaving / 12;
 
-    return {
-      acPct,
-      totalSavingPct,
-      annualSaving,
-      monthlySavingAvg
-    };
+    return { acPct, totalSavingPct, annualSaving, monthlySavingAvg };
   });
 
-  // ========== 導入費用（税別） ==========
+  // 導入費用（税別）
   const totalArea = SIZES.reduce((acc, sz) => acc + (AREA[sz] * (desired[sz]||0)), 0);
   const personDaysNeeded = totalArea>0 ? Math.ceil(totalArea / 8.4) : 0;
   const crew = Math.min(4, Math.max(1, personDaysNeeded));
@@ -347,7 +302,7 @@ function onSubmit(e){
   const packageSum = SIZES.reduce((acc, sz) => acc + (PRICE[sz] * (desired[sz]||0)), 0);
   const introduceCost = packageSum + cleanFee + miscFee + transport + lodging;
 
-  // ========== 回収年数（3パターン） ==========
+  // 回収年数（3パターン）
   const resultRows = scenarios.map(sc => {
     const monthsPayback = sc.monthlySavingAvg>0 ? introduceCost / sc.monthlySavingAvg : Infinity;
     return {
@@ -359,7 +314,7 @@ function onSubmit(e){
     };
   });
 
-  // ========== 結果描画 ==========
+  // 結果描画
   const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">

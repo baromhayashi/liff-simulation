@@ -28,6 +28,16 @@ body {
 .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
 @media (max-width: 720px){ .grid-2 { grid-template-columns: 1fr; } }
 
+/* 電気代入力の左右並び */
+.bill-dual-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr; /* 左：年間平均（コンパクト）／右：毎月入力（広め） */
+  gap: 12px;
+}
+@media (max-width: 720px){
+  .bill-dual-grid { grid-template-columns: 1fr; }
+}
+
 /* 入力 */
 .form-group { display: grid; gap:6px; margin-bottom: 10px; }
 .form-group input, .form-group select {
@@ -73,48 +83,28 @@ body {
   gap: 8px;
   align-items: center;
 }
-.inline-delete {
-  white-space: nowrap;
-}
+.inline-delete { white-space: nowrap; }
 
 /* スマホ向け最適化（幅 <= 480px） */
 @media (max-width: 480px){
   /* 既設：サイズプルダウンを小さめに */
   .row.existing-row .cell.size select {
-    width: 120px;         /* 小さくする */
+    width: 120px;
     min-width: 110px;
     max-width: 140px;
   }
-
-  /* 既設：グリッドを2列にし、方角と削除を同じ行に */
+  /* 既設：2列にして方角＋削除を同じ行へ */
   .row.existing-row {
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
       "size count"
-      "orientation orientation"; /* actionsセルは非表示にして、方角セル内の削除ボタンを使用 */
+      "orientation orientation";
   }
   .row.existing-row .cell.size { grid-area: size; }
   .row.existing-row .cell.count { grid-area: count; }
   .row.existing-row .cell.orientation { grid-area: orientation; }
-
-  /* 既設：従来の actions セルはスマホでは隠す（方角セル内のボタンを使う） */
-  .row.existing-row .cell.actions {
-    display: none;
-  }
+  .row.existing-row .cell.actions { display: none; }
 }
-
-/* ボタン */
-.btn-row { margin: 8px 0 0; }
-.btn {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #d9d9d9;
-  background: #fafafa;
-  cursor: pointer;
-}
-.btn:hover { background: #f0f0f0; }
-.btn-danger { border-color: #ffdddd; background: #ffecec; }
-.btn-danger:hover { background: #ffdede; }
 
 /* 表（結果表示用） */
 .table-scroll { overflow-x:auto; }

@@ -30,7 +30,6 @@
                 <input type="text" id="project-name" placeholder="施設名など" required />
               </div>
             </div>
-            <!-- 施工住所の項目はご要望により削除 -->
           </div>
 
           <!-- 電気代入力 -->
@@ -38,14 +37,15 @@
             <h2 class="section-title">過去の電気代情報（直近12か月）</h2>
 
             <div class="input-type-wrapper" role="radiogroup" aria-label="電気代入力方法">
-              <label><input type="radio" name="bill-type" value="annual" id="radio-annual" /> 年間平均入力</label>
-              <label><input type="radio" name="bill-type" value="monthly" id="radio-monthly" checked /> 毎月入力</label>
+              <!-- 年間平均をデフォルト選択 -->
+              <label><input type="radio" name="bill-type" value="annual" id="radio-annual" checked /> 年間平均入力</label>
+              <label><input type="radio" name="bill-type" value="monthly" id="radio-monthly" /> 毎月入力</label>
             </div>
 
             <!-- 並び順：左＝年間平均、右＝毎月 -->
             <div class="bill-dual-grid">
               <!-- 年間平均（左） -->
-              <div id="annual-bill-container" class="bill-input-container" style="display:none;">
+              <div id="annual-bill-container" class="bill-input-container">
                 <div class="form-group">
                   <label for="annual-bill">年間平均電気代（1か月あたり）【円】</label>
                   <input type="number" id="annual-bill" placeholder="例：100000" min="0" inputmode="numeric" />
@@ -53,7 +53,7 @@
               </div>
 
               <!-- 毎月入力（右） -->
-              <div id="monthly-bill-container" class="bill-input-container">
+              <div id="monthly-bill-container" class="bill-input-container" style="display:none;">
                 <div class="monthly-grid" id="monthly-grid"></div>
               </div>
             </div>

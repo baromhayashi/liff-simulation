@@ -87,7 +87,7 @@ body {
   background:#fff;
 }
 
-/* 既設：設置方角セル内で削除ボタンを横並びにする */
+/* 既設：設置方角セル内で削除ボタンを横並びにするラッパ */
 .ori-with-action {
   display: flex;
   gap: 8px;
@@ -98,48 +98,56 @@ body {
 /* 既設：右端の actions セルは念のため非表示（テンプレから削除済みだが安全策） */
 .row.existing-row .cell.actions { display: none; }
 
-/* ===== スマホ向け最適化（幅 <= 480px） ===== */
+/* ===== スマホ向け最適化（幅 <= 480px）===== */
 @media (max-width: 480px){
 
   /* 室外機サイズ別台数・設置方角：横並び最優先
-     1列＝サイズ、2列＝台数、3列＝設置方角、4列＝削除ボタン（細め） */
+     3カラム固定（サイズ／台数／設置方角+削除［同じ行］）で
+     サイズ・台数・設置方角の「大きさ（高さ・見た目）」を同一に統一 */
   .row.existing-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 1fr 1fr 1fr; /* 同じ幅で3分割 */
     gap: 6px;
     align-items: end;
   }
 
-  /* 各入力の幅と高さを統一（サイズ＝台数＝設置方角） */
+  /* ラベル下のコントロールを小さめ＆高さ揃え */
   .row.existing-row .cell.size select,
   .row.existing-row .cell.count input[type="number"],
   .row.existing-row .cell.orientation select {
     width: 100%;
-    min-width: 0;      /* 以前の固定幅を解除 */
-    padding: 10px 12px;
-    font-size: 16px;
-    height: 44px;      /* 見た目を揃えるため固定高 */
+    min-width: 0;
+    padding: 8px 10px;     /* 少しコンパクトに */
+    font-size: 14px;       /* 小さめ */
+    height: 40px;          /* 高さ統一 */
     line-height: 1.2;
   }
 
-  /* 設置方角の右隣に削除ボタンを配置（小さめ） */
+  /* 設置方角セルの中で「セレクト＋削除ボタン」を横並び・同一行に */
   .row.existing-row .ori-with-action {
-    display: contents; /* セレクトとボタンを別セル風に扱うため（中の要素に幅を持たせる） */
+    display: flex;         /* ★縦並び解消：必ず横並び */
+    flex-wrap: nowrap;     /* 折り返さない */
+    gap: 6px;
+    align-items: center;
+    width: 100%;
   }
-  /* セレクト自体は3列目に据え置き（上の統一指定が効く） */
+  .row.existing-row .ori-with-action select {
+    flex: 1 1 auto;        /* セレクトは残り幅いっぱい */
+    min-width: 0;          /* 収まり優先 */
+  }
 
-  /* 削除ボタンの見た目（小さく） */
+  /* 削除ボタンだけ小さめ（右隣） */
   .row.existing-row .inline-delete {
-    padding: 8px 10px;
+    flex: 0 0 auto;
+    padding: 6px 8px;
     border-radius: 10px;
     border: 1px solid #d9d9d9;
     background: #fafafa;
     font-size: 12px;
-    height: 40px;      /* 入力より一回り小さく */
+    height: 34px;          /* 入力より一回り小さく */
     line-height: 1;
   }
 
-  /* 施工希望行は従来通りでOK（2カラム＋削除） */
+  /* 施工希望行は従来通り（2カラム＋削除） */
   .row.desired-row {
     grid-template-columns: 1fr 1fr auto;
     gap: 8px;

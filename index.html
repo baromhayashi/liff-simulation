@@ -1,105 +1,92 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8" />
-  <title>テラノペイント 簡易見積・回収年数シミュレーション</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="format-detection" content="telephone=no" />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="main-wrapper">
-    <header>
-      <h1 class="page-title">テラノペイント<br />簡易見積・回収年数シミュレーション</h1>
-      <p class="page-note">※簡易見積のため概算です。実月額がある月は実額優先、欠損月は平均×季節係数で補完します。</p>
-    </header>
+/* ベース */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  background: #f6f7fb;
+  color: #222;
+}
 
-    <main>
-      <div class="form-wrapper">
-        <form id="simulation-form" novalidate>
-          <!-- 基本情報 -->
-          <div class="form-section">
-            <h2 class="section-title">基本情報</h2>
-            <div class="grid-2">
-              <div class="form-group">
-                <label for="client-name">クライアント様名</label>
-                <input type="text" id="client-name" placeholder="株式会社〇〇 など" required />
-              </div>
-              <div class="form-group">
-                <label for="project-name">案件名</label>
-                <input type="text" id="project-name" placeholder="施設名など" required />
-              </div>
-            </div>
-            <!-- 施工住所の項目はご要望により削除 -->
-          </div>
+/* ラッパ */
+.main-wrapper {
+  max-width: 880px;
+  margin: 0 auto;
+  background: #fff;
+  padding: 20px 16px 48px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
 
-          <!-- 電気代入力 -->
-          <div class="form-section">
-            <h2 class="section-title">過去の電気代情報（直近12か月）</h2>
+.page-title { font-size: 24px; line-height: 1.3; margin: 8px 0; }
+.page-note { color:#666; margin: 0 0 8px; font-size: 13px; }
 
-            <div class="input-type-wrapper" role="radiogroup" aria-label="電気代入力方法">
-              <label><input type="radio" name="bill-type" value="annual" id="radio-annual" /> 年間平均入力</label>
-              <label><input type="radio" name="bill-type" value="monthly" id="radio-monthly" checked /> 毎月入力</label>
-            </div>
+/* セクション */
+.form-section { margin: 22px 0; }
+.section-title { font-size: 18px; margin: 0 0 10px; }
+.section-help { color:#666; margin: 6px 0 10px; font-size: 13px; }
 
-            <!-- 並び順：左＝年間平均、右＝毎月 -->
-            <div class="bill-dual-grid">
-              <!-- 年間平均（左） -->
-              <div id="annual-bill-container" class="bill-input-container" style="display:none;">
-                <div class="form-group">
-                  <label for="annual-bill">年間平均電気代（1か月あたり）【円】</label>
-                  <input type="number" id="annual-bill" placeholder="例：100000" min="0" inputmode="numeric" />
-                </div>
-              </div>
+/* グリッド */
+.grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+@media (max-width: 720px){ .grid-2 { grid-template-columns: 1fr; } }
 
-              <!-- 毎月入力（右） -->
-              <div id="monthly-bill-container" class="bill-input-container">
-                <div class="monthly-grid" id="monthly-grid"></div>
-              </div>
-            </div>
+/* 電気代入力の左右並び（右＝毎月を広く） */
+.bill-dual-grid {
+  display: grid;
+  grid-template-columns: 1fr 3fr; /* 左：年間平均／右：毎月入力を広めにして元の入力幅感に戻す */
+  gap: 12px;
+}
+@media (max-width: 720px){
+  .bill-dual-grid { grid-template-columns: 1fr; }
+}
 
-            <div class="form-group">
-              <label for="ac-ratio">空調比率【%】（小数1桁まで）</label>
-              <input type="number" id="ac-ratio" placeholder="例：25" min="0" max="100" step="0.1" required />
-              <small>※計算は「−5%／±0%／+5%」の3パターン（0〜100%に丸め）</small>
-            </div>
-          </div>
+/* 入力 */
+.form-group { display: grid; gap:6px; margin-bottom: 10px; }
+.form-group input, .form-group select {
+  width: 100%; padding: 10px 12px; border:1px solid #dcdde2; border-radius:10px; font-size:16px; background:#fff;
+}
 
-          <!-- 既設 室外機（行追加式：サイズ/台数/方角） -->
-          <div class="form-section">
-            <h2 class="section-title">室外機サイズ別台数・設置方角</h2>
-            <p class="section-help">サイズ・台数・設置方角の組み合わせを必要数追加してください。</p>
-            <div id="existing-list"></div>
-            <div class="btn-row">
-              <button type="button" class="btn" id="add-existing-row">＋ 室外機を追加</button>
-            </div>
-            <small>※同じサイズ・方角の行は複数追加可能です（計算時に合算されます）。</small>
-          </div>
+/* ラジオ */
+.input-type-wrapper { display:flex; gap:16px; margin-bottom: 12px; }
+.input-type-wrapper input[type="radio"]{ transform: scale(1.05); }
 
-          <!-- 施工希望台数（行追加式：サイズ/台数） -->
-          <div class="form-section">
-            <h2 class="section-title">施工希望台数</h2>
-            <p class="section-help">導入費用の試算に用います。サイズと台数の組み合わせを追加してください。</p>
-            <div id="desired-list"></div>
-            <div class="btn-row">
-              <button type="button" class="btn" id="add-desired-row">＋ 室外機を追加</button>
-            </div>
-          </div>
+/* 月別（毎月入力の各月フォームは従来サイズ感を維持） */
+.monthly-grid {
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 640px){ .monthly-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 420px){ .monthly-grid { grid-template-columns: 1fr; } }
 
-          <button type="submit" id="calculate-button" class="form-btn">シミュレーション実行</button>
-        </form>
-      </div>
+/* 行追加式（既設・施工希望） */
+.row.existing-row,
+.row.desired-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: end;
+}
+.row.existing-row .cell label,
+.row.desired-row .cell label {
+  display:block; font-size: 13px; color:#666; margin-bottom: 4px;
+}
+.row.existing-row .cell select,
+.row.desired-row .cell select,
+.row.existing-row .cell input[type="number"],
+.row.desired-row .cell input[type="number"]{
+  width: 100%; padding: 10px 12px; border:1px solid #dcdde2; border-radius:10px; font-size:16px; background:#fff;
+}
 
-      <!-- 結果 -->
-      <section id="result-area" class="result-section" style="display:none;">
-        <h2>結果</h2>
-        <div id="result-content"></div>
-      </section>
-    </main>
-  </div>
+/* 既設：設置方角セル内で削除ボタンを横並びにするラッパ（削除ボタンはここだけ） */
+.ori-with-action {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.inline-delete { white-space: nowrap; }
 
-  <!-- LIFF SDK（LINE上利用時） -->
-  <script src="https://static.line-scdn.net/liff/sdk/2.1.0/liff.js"></script>
-  <script src="app.js"></script>
-</body>
-</html>
+/* 既設：右端の actions セルは廃止（テンプレ側から削除済み） */
+/* 既存CSSの互換のための安全策（残っていても非表示に） */
+.row.existing-row .cell.actions { display: none; }
+
+/* スマホ向け最*

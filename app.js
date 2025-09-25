@@ -144,21 +144,19 @@ function paintExistingRows(){
           <select id="ex-ori-${r.id}">
             ${["南","北","東","西"].map(o => `<option value="${o}" ${o===r.orientation?'selected':''}>${o}面</option>`).join("")}
           </select>
+          <!-- 削除ボタンは方角の横に1つだけ配置 -->
           <button type="button" class="btn btn-danger inline-delete" id="ex-del-${r.id}">削除</button>
         </div>
-      </div>
-      <div class="cell actions">
-        <button type="button" class="btn btn-danger" id="ex-del-dup-${r.id}">削除</button>
       </div>
     </div>
   `).join("");
 
+  // イベント付与
   existingRows.forEach(r => {
     qs(`#ex-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
     qs(`#ex-count-${r.id}`).addEventListener("input", e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });
     qs(`#ex-ori-${r.id}`).addEventListener("change", e => r.orientation = e.target.value);
     qs(`#ex-del-${r.id}`).addEventListener("click", () => removeExistingRow(r.id));
-    qs(`#ex-del-dup-${r.id}`).addEventListener("click", () => removeExistingRow(r.id));
   });
 }
 
@@ -319,83 +317,4 @@ function onSubmit(e){
   res.innerHTML = `
     <div class="result-block">
       <h3>前提まとめ</h3>
-      <div class="kv">
-        <div><span>月間平均電気代（補完後）</span><strong>${fmtYen(avgBill)}</strong></div>
-        <div><span>総塗布面積</span><strong>${roundPct1(totalArea)} ㎡</strong></div>
-        <div><span>必要人日</span><strong>${personDaysNeeded} 人日</strong></div>
-        <div><span>施工人数</span><strong>${crew} 人</strong></div>
-        <div><span>施工日数</span><strong>${workDays} 日</strong></div>
-      </div>
-    </div>
-
-    <div class="result-block">
-      <h3>導入費用（税別）</h3>
-      <div class="kv">
-        <div><span>本体価格（合計）</span><strong>${fmtYen(packageSum)}</strong></div>
-        <div><span>清掃・養生費</span><strong>${fmtYen(cleanFee)}</strong></div>
-        <div><span>予備費</span><strong>${fmtYen(miscFee)}</strong></div>
-        <div><span>交通費</span><strong>${fmtYen(transport)}</strong></div>
-        <div><span>宿泊費</span><strong>${fmtYen(lodging)}</strong></div>
-        <div class="total"><span>導入費用（税別）</span><strong>${fmtYen(introduceCost)}</strong></div>
-      </div>
-    </div>
-
-    <div class="result-block">
-      <h3>削減額と回収期間（空調比率 3パターン）</h3>
-      <div class="table-scroll">
-        <table class="table">
-          <thead>
-            <tr><th>空調比率</th><th>全体節電率</th><th>月間削減額</th><th>年間削減額</th><th>回収期間</th></tr>
-          </thead>
-          <tbody>
-            ${resultRows.map(r => `
-              <tr>
-                <td>${r.acPct}%</td>
-                <td>${r.savingPct}%</td>
-                <td>${fmtYen(r.monthlySaving)}</td>
-                <td>${fmtYen(r.annualSaving)}</td>
-                <td>${r.paybackMonths !== null ? r.paybackMonths + " か月" : "算出不可"}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-      <small>※金額は表示時に切り上げ。％は小数1桁四捨五入。期間（か月）は切り上げ。</small>
-    </div>
-  `;
-
-  qs("#result-area").style.display = "";
-}
-
-// =========================
-// ヘルパ
-// =========================
-function gv(id){ return document.getElementById(id).value; }
-function qs(sel){ return document.querySelector(sel); }
-function cryptoRandomId(){ return 'xxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)); }
-function sumOrient(obj){ return ["南","北","東","西"].reduce((a,o)=>a + (obj?.[o]||0), 0); }
-function clampPct(x){ if (isNaN(x)) return 0; return Math.max(0, Math.min(100, x)); }
-function fmtYen(x){ const n = ceilMoney(+x || 0); return n.toLocaleString("ja-JP") + " 円"; }
-
-/** 行式 -> サイズ×方角に集計（既設） */
-function aggregateExistingRows(rows){
-  const agg = {}; SIZES.forEach(sz => { agg[sz] = { 南:0, 北:0, 東:0, 西:0 }; });
-  rows.forEach(r => {
-    const sz = r.size; const ori = r.orientation; const c = Math.max(0, Number(r.count) || 0);
-    if (!agg[sz]) agg[sz] = { 南:0, 北:0, 東:0, 西:0 };
-    if (agg[sz][ori] === undefined) agg[sz][ori] = 0;
-    agg[sz][ori] += c;
-  });
-  return agg;
-}
-
-/** 行式 -> サイズ合計に集計（施工希望） */
-function aggregateDesiredRows(rows){
-  const agg = {}; SIZES.forEach(sz => agg[sz] = 0);
-  rows.forEach(r => {
-    const sz = r.size; const c = Math.max(0, Number(r.count) || 0);
-    if (agg[sz] === undefined) agg[sz] = 0;
-    agg[sz] += c;
-  });
-  return agg;
-}
+      <div class="

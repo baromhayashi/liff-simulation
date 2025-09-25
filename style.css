@@ -28,10 +28,10 @@ body {
 .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
 @media (max-width: 720px){ .grid-2 { grid-template-columns: 1fr; } }
 
-/* 電気代入力の左右並び（右＝毎月を広く） */
+/* 電気代入力の左右並び（左：年間平均／右：毎月入力） */
 .bill-dual-grid {
   display: grid;
-  grid-template-columns: 1fr 3fr; /* 左：年間平均／右：毎月入力 */
+  grid-template-columns: 1fr 3fr; /* 右側の毎月入力を広めに確保 */
   gap: 12px;
 }
 @media (max-width: 720px){
@@ -41,17 +41,22 @@ body {
 /* 入力 */
 .form-group { display: grid; gap:6px; margin-bottom: 10px; }
 .form-group input, .form-group select {
-  width: 100%; padding: 10px 12px; border:1px solid #dcdde2; border-radius:10px; font-size:16px; background:#fff;
+  width: 100%;
+  padding: 10px 12px;
+  border:1px solid #dcdde2;
+  border-radius:10px;
+  font-size:16px;
+  background:#fff;
 }
 
 /* ラジオ */
 .input-type-wrapper { display:flex; gap:16px; margin-bottom: 12px; }
 .input-type-wrapper input[type="radio"]{ transform: scale(1.05); }
 
-/* 月別（←ここだけ変更：3列→2列） */
+/* 月別（毎月入力の各月フォーム）— 幅感を以前の広さに */
 .monthly-grid {
   display:grid;
-  grid-template-columns: repeat(2, 1fr); /* 以前の幅に戻す */
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 @media (max-width: 640px){ .monthly-grid { grid-template-columns: 1fr; } }
@@ -61,7 +66,7 @@ body {
 .row.existing-row,
 .row.desired-row {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr auto; /* PC時：サイズ・台数・（右端に）削除ボタン等 */
   gap: 8px;
   margin-bottom: 8px;
   align-items: end;
@@ -74,10 +79,15 @@ body {
 .row.desired-row .cell select,
 .row.existing-row .cell input[type="number"],
 .row.desired-row .cell input[type="number"]{
-  width: 100%; padding: 10px 12px; border:1px solid #dcdde2; border-radius:10px; font-size:16px; background:#fff;
+  width: 100%;
+  padding: 10px 12px;
+  border:1px solid #dcdde2;
+  border-radius:10px;
+  font-size:16px;
+  background:#fff;
 }
 
-/* 既設：設置方角セル内で削除ボタンを横並びにするラッパ（削除ボタンはここだけ） */
+/* 既設：設置方角セル内で削除ボタンを横並びにする */
 .ori-with-action {
   display: flex;
   gap: 8px;
@@ -85,27 +95,55 @@ body {
 }
 .inline-delete { white-space: nowrap; }
 
-/* 既設：右端の actions セルは非表示（テンプレから削除済みだが安全策） */
+/* 既設：右端の actions セルは念のため非表示（テンプレから削除済みだが安全策） */
 .row.existing-row .cell.actions { display: none; }
 
-/* スマホ向け最適化（幅 <= 480px） */
+/* ===== スマホ向け最適化（幅 <= 480px） ===== */
 @media (max-width: 480px){
-  /* 既設：サイズプルダウンを小さめに */
-  .row.existing-row .cell.size select {
-    width: 120px;
-    min-width: 110px;
-    max-width: 140px;
-  }
-  /* 既設：2列にして方角＋削除を同じ行へ */
+
+  /* 室外機サイズ別台数・設置方角：横並び最優先
+     1列＝サイズ、2列＝台数、3列＝設置方角、4列＝削除ボタン（細め） */
   .row.existing-row {
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      "size count"
-      "orientation orientation";
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 6px;
+    align-items: end;
   }
-  .row.existing-row .cell.size { grid-area: size; }
-  .row.existing-row .cell.count { grid-area: count; }
-  .row.existing-row .cell.orientation { grid-area: orientation; }
+
+  /* 各入力の幅と高さを統一（サイズ＝台数＝設置方角） */
+  .row.existing-row .cell.size select,
+  .row.existing-row .cell.count input[type="number"],
+  .row.existing-row .cell.orientation select {
+    width: 100%;
+    min-width: 0;      /* 以前の固定幅を解除 */
+    padding: 10px 12px;
+    font-size: 16px;
+    height: 44px;      /* 見た目を揃えるため固定高 */
+    line-height: 1.2;
+  }
+
+  /* 設置方角の右隣に削除ボタンを配置（小さめ） */
+  .row.existing-row .ori-with-action {
+    display: contents; /* セレクトとボタンを別セル風に扱うため（中の要素に幅を持たせる） */
+  }
+  /* セレクト自体は3列目に据え置き（上の統一指定が効く） */
+
+  /* 削除ボタンの見た目（小さく） */
+  .row.existing-row .inline-delete {
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid #d9d9d9;
+    background: #fafafa;
+    font-size: 12px;
+    height: 40px;      /* 入力より一回り小さく */
+    line-height: 1;
+  }
+
+  /* 施工希望行は従来通りでOK（2カラム＋削除） */
+  .row.desired-row {
+    grid-template-columns: 1fr 1fr auto;
+    gap: 8px;
+  }
 }
 
 /* 表（結果表示用） */

@@ -31,7 +31,7 @@ body {
 /* 電気代入力の左右並び（右＝毎月を広く） */
 .bill-dual-grid {
   display: grid;
-  grid-template-columns: 1fr 3fr; /* 左：年間平均／右：毎月入力を広めにして元の入力幅感に戻す */
+  grid-template-columns: 1fr 3fr; /* 左：年間平均／右：毎月入力 */
   gap: 12px;
 }
 @media (max-width: 720px){
@@ -48,13 +48,13 @@ body {
 .input-type-wrapper { display:flex; gap:16px; margin-bottom: 12px; }
 .input-type-wrapper input[type="radio"]{ transform: scale(1.05); }
 
-/* 月別（毎月入力の各月フォームは従来サイズ感を維持） */
+/* 月別（←ここだけ変更：3列→2列） */
 .monthly-grid {
   display:grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr); /* 以前の幅に戻す */
   gap: 10px;
 }
-@media (max-width: 640px){ .monthly-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px){ .monthly-grid { grid-template-columns: 1fr; } }
 @media (max-width: 420px){ .monthly-grid { grid-template-columns: 1fr; } }
 
 /* 行追加式（既設・施工希望） */
@@ -85,8 +85,7 @@ body {
 }
 .inline-delete { white-space: nowrap; }
 
-/* 既設：右端の actions セルは廃止（テンプレ側から削除済み） */
-/* 既存CSSの互換のための安全策（残っていても非表示に） */
+/* 既設：右端の actions セルは非表示（テンプレから削除済みだが安全策） */
 .row.existing-row .cell.actions { display: none; }
 
 /* スマホ向け最適化（幅 <= 480px） */

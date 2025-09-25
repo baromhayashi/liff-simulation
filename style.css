@@ -31,7 +31,7 @@ body {
 /* 電気代入力の左右並び（左：年間平均／右：毎月入力） */
 .bill-dual-grid {
   display: grid;
-  grid-template-columns: 1fr 3fr; /* 右側の毎月入力を広めに確保 */
+  grid-template-columns: 1fr 3fr;
   gap: 12px;
 }
 @media (max-width: 720px){
@@ -47,13 +47,15 @@ body {
   border-radius:10px;
   font-size:16px;
   background:#fff;
+  height: 44px;           /* ▼ 台数入力に合わせて高さを固定 */
+  line-height: 1.2;
 }
 
 /* ラジオ */
 .input-type-wrapper { display:flex; gap:16px; margin-bottom: 12px; }
 .input-type-wrapper input[type="radio"]{ transform: scale(1.05); }
 
-/* 月別（毎月入力の各月フォーム）— 幅感を以前の広さに */
+/* 月別入力 */
 .monthly-grid {
   display:grid;
   grid-template-columns: repeat(2, 1fr);
@@ -66,7 +68,7 @@ body {
 .row.existing-row,
 .row.desired-row {
   display: grid;
-  grid-template-columns: 1fr 1fr auto; /* PC時：サイズ・台数・（右端に）削除ボタン等 */
+  grid-template-columns: 1fr 1fr auto;
   gap: 8px;
   margin-bottom: 8px;
   align-items: end;
@@ -85,9 +87,11 @@ body {
   border-radius:10px;
   font-size:16px;
   background:#fff;
+  height: 44px;           /* ▼ サイズと台数の高さを統一 */
+  line-height: 1.2;
 }
 
-/* 既設：設置方角セル内で削除ボタンを横並びにするラッパ */
+/* 既設：設置方角＋削除ボタン横並び */
 .ori-with-action {
   display: flex;
   gap: 8px;
@@ -95,59 +99,52 @@ body {
 }
 .inline-delete { white-space: nowrap; }
 
-/* 既設：右端の actions セルは念のため非表示（テンプレから削除済みだが安全策） */
+/* 既設：右端 actions セルは非表示（テンプレから削除済みだが安全策） */
 .row.existing-row .cell.actions { display: none; }
 
 /* ===== スマホ向け最適化（幅 <= 480px）===== */
 @media (max-width: 480px){
 
-  /* 室外機サイズ別台数・設置方角：横並び最優先
-     3カラム固定（サイズ／台数／設置方角+削除［同じ行］）で
-     サイズ・台数・設置方角の「大きさ（高さ・見た目）」を同一に統一 */
   .row.existing-row {
-    grid-template-columns: 1fr 1fr 1fr; /* 同じ幅で3分割 */
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 6px;
     align-items: end;
   }
 
-  /* ラベル下のコントロールを小さめ＆高さ揃え */
   .row.existing-row .cell.size select,
   .row.existing-row .cell.count input[type="number"],
   .row.existing-row .cell.orientation select {
     width: 100%;
     min-width: 0;
-    padding: 8px 10px;     /* 少しコンパクトに */
-    font-size: 14px;       /* 小さめ */
-    height: 40px;          /* 高さ統一 */
+    padding: 8px 10px;
+    font-size: 14px;
+    height: 40px; /* 高さ統一 */
     line-height: 1.2;
   }
 
-  /* 設置方角セルの中で「セレクト＋削除ボタン」を横並び・同一行に */
   .row.existing-row .ori-with-action {
-    display: flex;         /* ★縦並び解消：必ず横並び */
-    flex-wrap: nowrap;     /* 折り返さない */
+    display: flex;
+    flex-wrap: nowrap;
     gap: 6px;
     align-items: center;
     width: 100%;
   }
   .row.existing-row .ori-with-action select {
-    flex: 1 1 auto;        /* セレクトは残り幅いっぱい */
-    min-width: 0;          /* 収まり優先 */
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
-  /* 削除ボタンだけ小さめ（右隣） */
   .row.existing-row .inline-delete {
     flex: 0 0 auto;
     padding: 6px 8px;
     border-radius: 10px;
-    border: 1px solid #d9d9d9;
+    border: 1px solid #dcdde2;
     background: #fafafa;
     font-size: 12px;
-    height: 34px;          /* 入力より一回り小さく */
+    height: 34px;
     line-height: 1;
   }
 
-  /* 施工希望行は従来通り（2カラム＋削除） */
   .row.desired-row {
     grid-template-columns: 1fr 1fr auto;
     gap: 8px;

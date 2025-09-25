@@ -28,10 +28,10 @@ body {
 .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
 @media (max-width: 720px){ .grid-2 { grid-template-columns: 1fr; } }
 
-/* 電気代入力の左右並び */
+/* 電気代入力の左右並び（右＝毎月を広く） */
 .bill-dual-grid {
   display: grid;
-  grid-template-columns: 1fr 2fr; /* 左：年間平均（コンパクト）／右：毎月入力（広め） */
+  grid-template-columns: 1fr 3fr; /* 左：年間平均／右：毎月入力を広めにして元の入力幅感に戻す */
   gap: 12px;
 }
 @media (max-width: 720px){
@@ -43,10 +43,12 @@ body {
 .form-group input, .form-group select {
   width: 100%; padding: 10px 12px; border:1px solid #dcdde2; border-radius:10px; font-size:16px; background:#fff;
 }
+
+/* ラジオ */
 .input-type-wrapper { display:flex; gap:16px; margin-bottom: 12px; }
 .input-type-wrapper input[type="radio"]{ transform: scale(1.05); }
 
-/* 月別 */
+/* 月別（毎月入力の各月フォームは従来サイズ感を維持） */
 .monthly-grid {
   display:grid;
   grid-template-columns: repeat(3, 1fr);
@@ -74,16 +76,18 @@ body {
 .row.desired-row .cell input[type="number"]{
   width: 100%; padding: 10px 12px; border:1px solid #dcdde2; border-radius:10px; font-size:16px; background:#fff;
 }
-.row.existing-row .actions,
-.row.desired-row .actions { justify-self: end; }
 
-/* 既設：設置方角セル内で削除ボタンを横並びにするラッパ */
+/* 既設：設置方角セル内で削除ボタンを横並びにするラッパ（削除ボタンはここだけ） */
 .ori-with-action {
   display: flex;
   gap: 8px;
   align-items: center;
 }
 .inline-delete { white-space: nowrap; }
+
+/* 既設：右端の actions セルは廃止（テンプレ側から削除済み） */
+/* 既存CSSの互換のための安全策（残っていても非表示に） */
+.row.existing-row .cell.actions { display: none; }
 
 /* スマホ向け最適化（幅 <= 480px） */
 @media (max-width: 480px){
@@ -103,7 +107,6 @@ body {
   .row.existing-row .cell.size { grid-area: size; }
   .row.existing-row .cell.count { grid-area: count; }
   .row.existing-row .cell.orientation { grid-area: orientation; }
-  .row.existing-row .cell.actions { display: none; }
 }
 
 /* 表（結果表示用） */

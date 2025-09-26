@@ -62,7 +62,7 @@ let existingRows = []; // {id, size, count, orientation}
 let desiredRows  = []; // {id, size, count}
 
 // =========================
-// 初期化
+/* 初期化 */
 // =========================
 document.addEventListener("DOMContentLoaded", async () => {
   renderMonthlyInputs();
@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // =========================
-// UI レンダリング
+/* UI レンダリング */
 // =========================
 function renderMonthlyInputs(){
   const container = document.getElementById("monthly-grid");
@@ -220,7 +220,7 @@ function paintDesiredRows(){
 }
 
 // =========================
-// 送信（計算ロジック）
+/* 送信（計算ロジック） */
 // =========================
 function onSubmit(e){
   e.preventDefault();
@@ -352,20 +352,20 @@ function onSubmit(e){
     };
   });
 
-  // ========== 結果描画（要望どおり簡略表示） ==========
+  // ========== 結果描画（指定どおり文言を変更） ==========
   const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">
       <h3>前提まとめ</h3>
       <div class="kv">
-        <div><span>月間平均電気代（補完後）</span><strong>${fmtYen(avgBill)}</strong></div>
+        <div><span>月間平均電気代</span><strong>${fmtYen(avgBill)}</strong></div>
       </div>
     </div>
 
     <div class="result-block">
-      <h3>導入費用（税別）</h3>
+      <h3>導入費用</h3>
       <div class="kv">
-        <div class="total"><span>導入費用（税別）</span><strong>${fmtYen(introduceCost)}</strong></div>
+        <div class="total"><span>導入費用</span><strong>${fmtYen(introduceCost)}</strong></div>
       </div>
     </div>
 
@@ -389,7 +389,6 @@ function onSubmit(e){
           </tbody>
         </table>
       </div>
-      <small>※金額は表示時に切り上げ。％は小数1桁四捨五入。期間（か月）は切り上げ。</small>
     </div>
   `;
 
@@ -397,7 +396,7 @@ function onSubmit(e){
 }
 
 // =========================
-// ヘルパ
+/* ヘルパ */
 // =========================
 function gv(id){ return document.getElementById(id).value; }
 function qs(sel){ return document.querySelector(sel); }

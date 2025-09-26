@@ -21,16 +21,16 @@
             <h2 class="section-title">基本情報</h2>
             <div class="grid-2">
               <div class="form-group">
-                <label for="client-name">クライアント様名（必須）</label>
-                <input type="text" id="client-name" placeholder="株式会社〇〇 など" required />
+                <label for="client-name">法人、または個人名（必須）</label>
+                <input type="text" id="client-name" placeholder="法人名または個人名を入力" required />
               </div>
               <div class="form-group">
-                <label for="project-name">案件名（必須）</label>
-                <input type="text" id="project-name" placeholder="施設名など" required />
+                <label for="project-name">施設名（必須）</label>
+                <input type="text" id="project-name" placeholder="施設名を入力" required />
               </div>
             </div>
 
-            <!-- ▼ジャンル追加（プルダウン） -->
+            <!-- ▼ジャンル（プルダウン） -->
             <div class="form-group">
               <label for="genre-select">ジャンル</label>
               <select id="genre-select">
@@ -80,7 +80,7 @@
 
             <div class="form-group">
               <label for="ac-ratio">空調比率【%】（小数1桁まで）</label>
-              <!-- ※ユーザー入力があれば優先、空欄ならジャンル既定値を自動適用するため required は外しています -->
+              <!-- 入力があれば優先、空欄ならジャンル既定値を自動適用（app.js） -->
               <input type="number" id="ac-ratio" placeholder="例：25（未入力ならジャンル基準を自動適用）" min="0" max="100" step="0.1" />
             </div>
           </div>

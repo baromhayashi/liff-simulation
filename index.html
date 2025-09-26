@@ -29,6 +29,27 @@
                 <input type="text" id="project-name" placeholder="施設名など" required />
               </div>
             </div>
+
+            <!-- ▼ジャンル追加（プルダウン） -->
+            <div class="form-group">
+              <label for="genre-select">ジャンル</label>
+              <select id="genre-select">
+                <option value="">選択してください</option>
+                <option value="オフィスビル">オフィスビル</option>
+                <option value="小売店舗（アパレル・雑貨等）">小売店舗（アパレル・雑貨等）</option>
+                <option value="スーパー・食品小売">スーパー・食品小売</option>
+                <option value="飲食店（レストラン等）">飲食店（レストラン等）</option>
+                <option value="ホテル・宿泊施設">ホテル・宿泊施設</option>
+                <option value="病院・クリニック">病院・クリニック</option>
+                <option value="工場（軽工業系）">工場（軽工業系）</option>
+                <option value="工場（重工業系）">工場（重工業系）</option>
+                <option value="学校・教育施設">学校・教育施設</option>
+                <option value="倉庫・物流施設">倉庫・物流施設</option>
+                <option value="アミューズメント施設（映画館・ゲームセンター）">アミューズメント施設（映画館・ゲームセンター）</option>
+                <option value="パチンコ店">パチンコ店</option>
+                <option value="フィットネスジム">フィットネスジム</option>
+              </select>
+            </div>
           </div>
 
           <!-- 電気代入力 -->
@@ -59,8 +80,8 @@
 
             <div class="form-group">
               <label for="ac-ratio">空調比率【%】（小数1桁まで）</label>
-              <input type="number" id="ac-ratio" placeholder="例：25" min="0" max="100" step="0.1" required />
-              <small>※計算は「−5%／±0%／+5%」の3パターン（0〜100%に丸め）</small>
+              <!-- ※ユーザー入力があれば優先、空欄ならジャンル既定値を自動適用するため required は外しています -->
+              <input type="number" id="ac-ratio" placeholder="例：25（未入力ならジャンル基準を自動適用）" min="0" max="100" step="0.1" />
             </div>
           </div>
 

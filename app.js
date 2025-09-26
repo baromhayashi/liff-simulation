@@ -40,6 +40,23 @@ const AREA = {
   S:0.8, M:1.3, L:1.7, LL:2.7, "3L":4.2, "4L":4.6, "5L":6.6, "6L":7.7, "7L":8.9, "8L":10.3
 };
 
+// ▼ジャンル別の既定空調比率（%）
+const GENRE_DEFAULTS = {
+  "オフィスビル": 45,
+  "小売店舗（アパレル・雑貨等）": 30,
+  "スーパー・食品小売": 20,
+  "飲食店（レストラン等）": 25,
+  "ホテル・宿泊施設": 45,
+  "病院・クリニック": 35,
+  "工場（軽工業系）": 15,
+  "工場（重工業系）": 10,
+  "学校・教育施設": 25,
+  "倉庫・物流施設": 10,
+  "アミューズメント施設（映画館・ゲームセンター）": 40,
+  "パチンコ店": 50,
+  "フィットネスジム": 35
+};
+
 // 既設・施工希望（行追加式）
 let existingRows = []; // {id, size, count, orientation}
 let desiredRows  = []; // {id, size, count}
@@ -144,7 +161,6 @@ function paintExistingRows(){
           <select id="ex-ori-${r.id}">
             ${["南","北","東","西"].map(o => `<option value="${o}" ${o===r.orientation?'selected':''}>${o}面</option>`).join("")}
           </select>
-          <!-- 削除ボタンは方角の横に1つだけ配置 -->
           <button type="button" class="btn btn-danger inline-delete" id="ex-del-${r.id}">削除</button>
         </div>
       </div>
@@ -204,7 +220,7 @@ function paintDesiredRows(){
 }
 
 // =========================
-// 送信（計算ロジックは現行踏襲）
+// 送信（計算ロジック）
 // =========================
 function onSubmit(e){
   e.preventDefault();
@@ -216,27 +232,43 @@ function onSubmit(e){
     return;
   }
 
-  // 電気代
+  // --- 電気代 ---
   const monthlyMode = qs("#radio-monthly").checked;
   let monthlyBills = [];
   if (monthlyMode){
-    for (let m=1; m<=12; m++){ monthlyBills.push(+gv(`bill-${m}`) || 0); }
+    for (let m=1; m<=12; m++){
+      const v = +gv(`bill-${m}`) || 0;
+      monthlyBills.push(v);
+    }
   } else {
     const avg = +gv("annual-bill") || 0;
     monthlyBills = Array(12).fill(avg);
   }
 
+  // 実入力がある月だけで平均 → 欠損は季節係数で補完
   const provided = monthlyBills.filter(v => v>0);
   const monthlyAvg = provided.length>0 ? (provided.reduce((a,b)=>a+b,0) / provided.length) : 0;
-
   const completedBills = monthlyBills.map((v, idx) => v>0 ? v : monthlyAvg * MONTH_COEF[idx+1]);
   const avgBill = completedBills.reduce((a,b)=>a+b,0) / 12;
 
-  // 空調比率（3パターン）
-  const acBase = clampPct(+gv("ac-ratio"));
+  // --- 空調比率（ジャンル自動適用：入力があれば優先） ---
+  const acInputRaw = gv("ac-ratio").trim();
+  const genre = gv("genre-select").trim();
+  let acBase;
+
+  if (acInputRaw !== "") {
+    acBase = clampPct(+acInputRaw);
+  } else if (genre && GENRE_DEFAULTS.hasOwnProperty(genre)) {
+    acBase = clampPct(GENRE_DEFAULTS[genre]);
+  } else {
+    alert("空調比率が未入力です。ジャンルを選択するか、空調比率を入力してください。");
+    return;
+  }
+
+  // 3パターン（±5% クランプ）
   const acVariants = [ clampPct(acBase-5), acBase, clampPct(acBase+5) ];
 
-  // 既設 → サイズ×方角集計
+  // --- 既設（行）→ サイズ×方角 集計 ---
   const existing = aggregateExistingRows(existingRows);
   const totalUnitsAll = SIZES.reduce((acc, sz) => acc + sumOrient(existing[sz] || {}), 0);
   if (totalUnitsAll === 0){
@@ -244,12 +276,13 @@ function onSubmit(e){
     return;
   }
 
-  // 施工希望 → サイズ合計集計
+  // --- 施工希望（行）→ サイズ合計 集計 ---
   const desired = aggregateDesiredRows(desiredRows);
 
-  // 削減額（3パターン）
+  // ========== 削減額計算 ==========
   const scenarios = acVariants.map(acPct => {
     const acCostMonthly = avgBill * (acPct/100);
+
     const totalUnits = SIZES.reduce((acc, sz) => acc + sumOrient(existing[sz] || {}), 0);
     const validSizes = SIZES.filter(sz => sumOrient(existing[sz] || {}) > 0);
 
@@ -280,6 +313,7 @@ function onSubmit(e){
     const totalSaving = Object.values(sizeSaving).reduce((a,b)=>a+b,0);
     const totalSavingPct = avgBill>0 ? (totalSaving / avgBill * 100) : 0;
 
+    // 年間想定削減額（平均×係数×節電率の合計）
     let annualSaving = 0;
     for (let m=1; m<=12; m++){ annualSaving += (avgBill * (MONTH_COEF[m] || 1)) * (totalSavingPct/100); }
     const monthlySavingAvg = annualSaving / 12;
@@ -287,7 +321,7 @@ function onSubmit(e){
     return { acPct, totalSavingPct, annualSaving, monthlySavingAvg };
   });
 
-  // 導入費用（税別）
+  // ========== 導入費用（税別） ==========
   const totalArea = SIZES.reduce((acc, sz) => acc + (AREA[sz] * (desired[sz]||0)), 0);
   const personDaysNeeded = totalArea>0 ? Math.ceil(totalArea / 8.4) : 0;
   const crew = Math.min(4, Math.max(1, personDaysNeeded));
@@ -300,7 +334,7 @@ function onSubmit(e){
   const packageSum = SIZES.reduce((acc, sz) => acc + (PRICE[sz] * (desired[sz]||0)), 0);
   const introduceCost = packageSum + cleanFee + miscFee + transport + lodging;
 
-  // 回収年数（3パターン）
+  // ========== 回収年数（3パターン） ==========
   const resultRows = scenarios.map(sc => {
     const monthsPayback = sc.monthlySavingAvg>0 ? introduceCost / sc.monthlySavingAvg : Infinity;
     return {
@@ -312,7 +346,7 @@ function onSubmit(e){
     };
   });
 
-  // 結果描画
+  // ========== 結果描画 ==========
   const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">

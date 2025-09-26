@@ -227,8 +227,15 @@ function onSubmit(e){
 
   const client  = gv("client-name").trim();
   const project = gv("project-name").trim();
+  const genre   = gv("genre-select").trim();
+
+  // 必須チェック（法人/個人名、施設名、ジャンル）
   if (!client || !project){
-    alert("クライアント名／案件名を入力してください。");
+    alert("法人・個人名／施設名を入力してください。");
+    return;
+  }
+  if (!genre){
+    alert("ジャンルを選択してください。");
     return;
   }
 
@@ -253,12 +260,10 @@ function onSubmit(e){
 
   // --- 空調比率（ジャンル自動適用：入力があれば優先） ---
   const acInputRaw = gv("ac-ratio").trim();
-  const genre = gv("genre-select").trim();
   let acBase;
-
   if (acInputRaw !== "") {
     acBase = clampPct(+acInputRaw);
-  } else if (genre && GENRE_DEFAULTS.hasOwnProperty(genre)) {
+  } else if (GENRE_DEFAULTS.hasOwnProperty(genre)) {
     acBase = clampPct(GENRE_DEFAULTS[genre]);
   } else {
     alert("空調比率が未入力です。ジャンルを選択するか、空調比率を入力してください。");
@@ -322,6 +327,7 @@ function onSubmit(e){
   });
 
   // ========== 導入費用（税別） ==========
+  // ※内部では従来通り算出します（明細は表示しません）
   const totalArea = SIZES.reduce((acc, sz) => acc + (AREA[sz] * (desired[sz]||0)), 0);
   const personDaysNeeded = totalArea>0 ? Math.ceil(totalArea / 8.4) : 0;
   const crew = Math.min(4, Math.max(1, personDaysNeeded));
@@ -346,28 +352,19 @@ function onSubmit(e){
     };
   });
 
-  // ========== 結果描画 ==========
+  // ========== 結果描画（要望どおり簡略表示） ==========
   const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">
       <h3>前提まとめ</h3>
       <div class="kv">
         <div><span>月間平均電気代（補完後）</span><strong>${fmtYen(avgBill)}</strong></div>
-        <div><span>総塗布面積</span><strong>${roundPct1(totalArea)} ㎡</strong></div>
-        <div><span>必要人日</span><strong>${personDaysNeeded} 人日</strong></div>
-        <div><span>施工人数</span><strong>${crew} 人</strong></div>
-        <div><span>施工日数</span><strong>${workDays} 日</strong></div>
       </div>
     </div>
 
     <div class="result-block">
       <h3>導入費用（税別）</h3>
       <div class="kv">
-        <div><span>本体価格（合計）</span><strong>${fmtYen(packageSum)}</strong></div>
-        <div><span>清掃・養生費</span><strong>${fmtYen(cleanFee)}</strong></div>
-        <div><span>予備費</span><strong>${fmtYen(miscFee)}</strong></div>
-        <div><span>交通費</span><strong>${fmtYen(transport)}</strong></div>
-        <div><span>宿泊費</span><strong>${fmtYen(lodging)}</strong></div>
         <div class="total"><span>導入費用（税別）</span><strong>${fmtYen(introduceCost)}</strong></div>
       </div>
     </div>

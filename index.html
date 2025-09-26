@@ -30,10 +30,10 @@
               </div>
             </div>
 
-            <!-- ▼ジャンル（プルダウン） -->
+            <!-- ▼ジャンル -->
             <div class="form-group">
-              <label for="genre-select">ジャンル</label>
-              <select id="genre-select">
+              <label for="genre-select">ジャンル（必須）</label>
+              <select id="genre-select" required>
                 <option value="">選択してください</option>
                 <option value="オフィスビル">オフィスビル</option>
                 <option value="小売店舗（アパレル・雑貨等）">小売店舗（アパレル・雑貨等）</option>
@@ -57,12 +57,10 @@
             <h2 class="section-title">過去の電気代情報（直近12か月）</h2>
 
             <div class="input-type-wrapper" role="radiogroup" aria-label="電気代入力方法">
-              <!-- 年間平均をデフォルト選択 -->
               <label><input type="radio" name="bill-type" value="annual" id="radio-annual" checked /> 年間平均入力</label>
               <label><input type="radio" name="bill-type" value="monthly" id="radio-monthly" /> 毎月入力</label>
             </div>
 
-            <!-- 並び順：左＝年間平均、右＝毎月 -->
             <div class="bill-dual-grid">
               <!-- 年間平均（左） -->
               <div id="annual-bill-container" class="bill-input-container">
@@ -80,12 +78,11 @@
 
             <div class="form-group">
               <label for="ac-ratio">空調比率【%】（小数1桁まで）</label>
-              <!-- 入力があれば優先、空欄ならジャンル既定値を自動適用（app.js） -->
               <input type="number" id="ac-ratio" placeholder="例：25（未入力ならジャンル基準を自動適用）" min="0" max="100" step="0.1" />
             </div>
           </div>
 
-          <!-- 既設 室外機（行追加式：サイズ/台数/方角） -->
+          <!-- 既設 室外機 -->
           <div class="form-section">
             <h2 class="section-title">室外機サイズ別台数・設置方角</h2>
             <p class="section-help">サイズ・台数・設置方角の組み合わせを必要数追加してください。</p>
@@ -93,13 +90,12 @@
             <div class="btn-row">
               <button type="button" class="btn" id="add-existing-row">＋ 室外機を追加</button>
             </div>
-            <small>※同じサイズ・方角の行は複数追加可能です（計算時に合算されます）。</small>
           </div>
 
-          <!-- 施工希望台数（行追加式：サイズ/台数） -->
+          <!-- 施工希望台数 -->
           <div class="form-section">
             <h2 class="section-title">施工希望台数</h2>
-            <p class="section-help">導入費用の試算に用います。サイズと台数の組み合わせを追加してください。</p>
+            <p class="section-help">導入費用の試算に用います。</p>
             <div id="desired-list"></div>
             <div class="btn-row">
               <button type="button" class="btn" id="add-desired-row">＋ 室外機を追加</button>
@@ -118,7 +114,6 @@
     </main>
   </div>
 
-  <!-- LIFF SDK（LINE上利用時） -->
   <script src="https://static.line-scdn.net/liff/sdk/2.1.0/liff.js"></script>
   <script src="app.js"></script>
 </body>

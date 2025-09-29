@@ -9,15 +9,8 @@ const SIZES = ["S","M","L","LL","3L","4L","5L","6L","7L","8L"];
 // 係数（α）
 const ALPHA = { S:1, M:1, L:2, LL:3, "3L":5, "4L":8, "5L":13, "6L":21, "7L":34, "8L":55 };
 
-// 基本節電率（南面）
+// 基本節電率（南面相当：方角補正なし）
 const BASE_SAVING_RATE = { S:8, M:12, L:16, LL:20, "3L":24, "4L":24, "5L":20, "6L":18, "7L":16, "8L":14 };
-
-// 方角補正（北：50%減、東西：20%減）
-function adjustByOrientation(base, orientation){
-  if (orientation === "北") return base * 0.5;
-  if (orientation === "東" || orientation === "西") return base * 0.8;
-  return base; // 南
-}
 
 // 月別係数（空調電力の季節変動）
 const MONTH_COEF = {
@@ -58,17 +51,27 @@ const GENRE_DEFAULTS = {
 };
 
 // 既設・施工希望（行追加式）
-let existingRows = []; // {id, size, count, orientation}
+let existingRows = []; // {id, size, count}
 let desiredRows  = []; // {id, size, count}
 
 // =========================
-/* 初期化 */
+// 初期化
 // =========================
 document.addEventListener("DOMContentLoaded", async () => {
   renderMonthlyInputs();
   setupBillTypeToggle();
 
-  // 既設（サイズ/台数/方角）
+  // ▼ジャンル選択で空調比率を自動反映
+  const genreSel = document.getElementById("genre-select");
+  const acInput  = document.getElementById("ac-ratio");
+  genreSel.addEventListener("change", () => {
+    const g = genreSel.value;
+    if (GENRE_DEFAULTS[g] != null) {
+      acInput.value = GENRE_DEFAULTS[g]; // 自動反映（%は付けない）
+    }
+  });
+
+  // 既設（サイズ/台数）
   renderExistingList();
   document.getElementById("add-existing-row").addEventListener("click", addExistingRow);
 
@@ -88,7 +91,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // =========================
-/* UI レンダリング */
+// UI レンダリング
 // =========================
 function renderMonthlyInputs(){
   const container = document.getElementById("monthly-grid");
@@ -125,7 +128,7 @@ function setupBillTypeToggle(){
   update();
 }
 
-// ===== 既設：行追加式 =====
+// ===== 既設：行追加式（方角なし） =====
 function renderExistingList(){
   const host = document.getElementById("existing-list");
   host.innerHTML = `<div id="existing-rows"></div>`;
@@ -134,7 +137,7 @@ function renderExistingList(){
 }
 function addExistingRow(){
   const id = cryptoRandomId();
-  existingRows.push({ id, size: "S", count: 1, orientation: "南" });
+  existingRows.push({ id, size: "S", count: 1 });
   paintExistingRows();
 }
 function removeExistingRow(id){
@@ -155,14 +158,8 @@ function paintExistingRows(){
         <label>台数</label>
         <input type="number" id="ex-count-${r.id}" min="0" value="${r.count}" />
       </div>
-      <div class="cell orientation">
-        <label>設置方角</label>
-        <div class="ori-with-action">
-          <select id="ex-ori-${r.id}">
-            ${["南","北","東","西"].map(o => `<option value="${o}" ${o===r.orientation?'selected':''}>${o}面</option>`).join("")}
-          </select>
-          <button type="button" class="btn btn-danger inline-delete" id="ex-del-${r.id}">削除</button>
-        </div>
+      <div class="cell actions">
+        <button type="button" class="btn btn-danger inline-delete" id="ex-del-${r.id}">削除</button>
       </div>
     </div>
   `).join("");
@@ -171,7 +168,6 @@ function paintExistingRows(){
   existingRows.forEach(r => {
     qs(`#ex-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
     qs(`#ex-count-${r.id}`).addEventListener("input", e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });
-    qs(`#ex-ori-${r.id}`).addEventListener("change", e => r.orientation = e.target.value);
     qs(`#ex-del-${r.id}`).addEventListener("click", () => removeExistingRow(r.id));
   });
 }
@@ -220,7 +216,7 @@ function paintDesiredRows(){
 }
 
 // =========================
-/* 送信（計算ロジック） */
+// 送信（計算ロジック）
 // =========================
 function onSubmit(e){
   e.preventDefault();
@@ -229,7 +225,7 @@ function onSubmit(e){
   const project = gv("project-name").trim();
   const genre   = gv("genre-select").trim();
 
-  // 必須チェック（法人/個人名、施設名、ジャンル）
+  // 必須チェック
   if (!client || !project){
     alert("法人・個人名／施設名を入力してください。");
     return;
@@ -269,52 +265,54 @@ function onSubmit(e){
     alert("空調比率が未入力です。ジャンルを選択するか、空調比率を入力してください。");
     return;
   }
-
-  // 3パターン（±5% クランプ）
   const acVariants = [ clampPct(acBase-5), acBase, clampPct(acBase+5) ];
 
-  // --- 既設（行）→ サイズ×方角 集計 ---
-  const existing = aggregateExistingRows(existingRows);
-  const totalUnitsAll = SIZES.reduce((acc, sz) => acc + sumOrient(existing[sz] || {}), 0);
+  // --- 既設（行）→ サイズ合計 集計（方角なし） ---
+  const existing = aggregateExistingRows(existingRows); // {size: count}
+  const totalUnitsAll = SIZES.reduce((acc, sz) => acc + (existing[sz] || 0), 0);
   if (totalUnitsAll === 0){
-    alert("室外機サイズ別台数・設置方角を1件以上入力してください。");
+    alert("室外機サイズ別台数を1件以上入力してください。");
     return;
   }
 
   // --- 施工希望（行）→ サイズ合計 集計 ---
   const desired = aggregateDesiredRows(desiredRows);
 
-  // ========== 削減額計算 ==========
+  // ========== 削減額計算（方角補正なし） ==========
   const scenarios = acVariants.map(acPct => {
     const acCostMonthly = avgBill * (acPct/100);
 
-    const totalUnits = SIZES.reduce((acc, sz) => acc + sumOrient(existing[sz] || {}), 0);
-    const validSizes = SIZES.filter(sz => sumOrient(existing[sz] || {}) > 0);
+    const validSizes = SIZES.filter(sz => (existing[sz] || 0) > 0);
+    const beta = {};
+    let betaTotal = 0;
 
-    const beta = {}; let betaTotal = 0;
+    // 台数比率→定数β
     for (const sz of validSizes){
-      const units  = sumOrient(existing[sz]);
-      const ratio  = units / totalUnits * 100;
-      beta[sz]     = (ALPHA[sz] || 0) * ratio;
-      betaTotal   += beta[sz];
+      const units = existing[sz] || 0;
+      const ratio = units / totalUnitsAll * 100; // 台数比率[%]
+      beta[sz] = (ALPHA[sz] || 0) * ratio;
+      betaTotal += beta[sz];
     }
 
-    const sizeAdj = {}; for (const sz of validSizes){ sizeAdj[sz] = beta[sz] / (betaTotal || 1) * 100; }
-    const sizeMonthlyCost = {}; for (const sz of validSizes){ sizeMonthlyCost[sz] = acCostMonthly * (sizeAdj[sz]/100); }
-
-    const sizeWeightedRate = {};
+    // サイズ補正[%]
+    const sizeAdj = {};
     for (const sz of validSizes){
-      const base = BASE_SAVING_RATE[sz] || 0;
-      const counts = existing[sz]; const total = sumOrient(counts);
-      let sumRates = 0;
-      for (const o of ["南","北","東","西"]){
-        const n = counts[o] || 0;
-        if (n>0){ sumRates += adjustByOrientation(base, o) * n; }
-      }
-      sizeWeightedRate[sz] = total>0 ? (sumRates / total) : 0;
+      sizeAdj[sz] = beta[sz] / (betaTotal || 1) * 100;
     }
 
-    const sizeSaving = {}; for (const sz of validSizes){ sizeSaving[sz] = sizeMonthlyCost[sz] * (sizeWeightedRate[sz]/100); }
+    // サイズ別 月間電気代
+    const sizeMonthlyCost = {};
+    for (const sz of validSizes){
+      sizeMonthlyCost[sz] = acCostMonthly * (sizeAdj[sz]/100);
+    }
+
+    // サイズ別 節電率（方角補正なし＝基準値）
+    const sizeSaving = {};
+    for (const sz of validSizes){
+      const rate = BASE_SAVING_RATE[sz] || 0;
+      sizeSaving[sz] = sizeMonthlyCost[sz] * (rate/100);
+    }
+
     const totalSaving = Object.values(sizeSaving).reduce((a,b)=>a+b,0);
     const totalSavingPct = avgBill>0 ? (totalSaving / avgBill * 100) : 0;
 
@@ -327,7 +325,6 @@ function onSubmit(e){
   });
 
   // ========== 導入費用（税別） ==========
-  // ※内部では従来通り算出します（明細は表示しません）
   const totalArea = SIZES.reduce((acc, sz) => acc + (AREA[sz] * (desired[sz]||0)), 0);
   const personDaysNeeded = totalArea>0 ? Math.ceil(totalArea / 8.4) : 0;
   const crew = Math.min(4, Math.max(1, personDaysNeeded));
@@ -352,7 +349,7 @@ function onSubmit(e){
     };
   });
 
-  // ========== 結果描画（指定どおり文言を変更） ==========
+  // ========== 結果描画 ==========
   const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">
@@ -363,7 +360,7 @@ function onSubmit(e){
     </div>
 
     <div class="result-block">
-      <h3>導入費用</h3>
+      <h3>導入費用（税別）</h3>
       <div class="kv">
         <div class="total"><span>導入費用</span><strong>${fmtYen(introduceCost)}</strong></div>
       </div>
@@ -396,23 +393,21 @@ function onSubmit(e){
 }
 
 // =========================
-/* ヘルパ */
+// ヘルパ
 // =========================
 function gv(id){ return document.getElementById(id).value; }
 function qs(sel){ return document.querySelector(sel); }
 function cryptoRandomId(){ return 'xxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)); }
-function sumOrient(obj){ return ["南","北","東","西"].reduce((a,o)=>a + (obj?.[o]||0), 0); }
 function clampPct(x){ if (isNaN(x)) return 0; return Math.max(0, Math.min(100, x)); }
 function fmtYen(x){ const n = ceilMoney(+x || 0); return n.toLocaleString("ja-JP") + " 円"; }
 
-/** 行式 -> サイズ×方角に集計（既設） */
+/** 行式 -> サイズ合計に集計（既設） */
 function aggregateExistingRows(rows){
-  const agg = {}; SIZES.forEach(sz => { agg[sz] = { 南:0, 北:0, 東:0, 西:0 }; });
+  const agg = {}; SIZES.forEach(sz => agg[sz] = 0);
   rows.forEach(r => {
-    const sz = r.size; const ori = r.orientation; const c = Math.max(0, Number(r.count) || 0);
-    if (!agg[sz]) agg[sz] = { 南:0, 北:0, 東:0, 西:0 };
-    if (agg[sz][ori] === undefined) agg[sz][ori] = 0;
-    agg[sz][ori] += c;
+    const sz = r.size; const c = Math.max(0, Number(r.count) || 0);
+    if (agg[sz] == null) agg[sz] = 0;
+    agg[sz] += c;
   });
   return agg;
 }
@@ -422,7 +417,7 @@ function aggregateDesiredRows(rows){
   const agg = {}; SIZES.forEach(sz => agg[sz] = 0);
   rows.forEach(r => {
     const sz = r.size; const c = Math.max(0, Number(r.count) || 0);
-    if (agg[sz] === undefined) agg[sz] = 0;
+    if (agg[sz] == null) agg[sz] = 0;
     agg[sz] += c;
   });
   return agg;

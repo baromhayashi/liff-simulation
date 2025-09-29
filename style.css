@@ -47,7 +47,7 @@ body {
   border-radius:10px;
   font-size:16px;
   background:#fff;
-  height: 44px;           /* 台数入力に合わせて高さ固定（PC/タブレット共通） */
+  height: 44px; /* 基本の高さ */
   line-height: 1.2;
 }
 
@@ -55,7 +55,7 @@ body {
 .input-type-wrapper { display:flex; gap:16px; margin-bottom: 12px; }
 .input-type-wrapper input[type="radio"]{ transform: scale(1.05); }
 
-/* 月別入力（毎月入力の各月フォーム） */
+/* 月別入力（毎月） */
 .monthly-grid {
   display:grid;
   grid-template-columns: repeat(2, 1fr);
@@ -68,7 +68,7 @@ body {
 .row.existing-row,
 .row.desired-row {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;  /* PC時：サイズ・台数・（右端に）削除ボタン等 */
+  grid-template-columns: 1fr 1fr auto;  /* サイズ／台数／削除 */
   gap: 8px;
   margin-bottom: 8px;
   align-items: end;
@@ -77,100 +77,64 @@ body {
 .row.desired-row .cell label {
   display:block; font-size: 13px; color:#666; margin-bottom: 4px;
 }
+
+/* ▼サイズ／台数の入力の見た目を「既設」=「施工希望」で統一 */
 .row.existing-row .cell select,
-.row.desired-row .cell select,
+.row.desired-row  .cell select,
 .row.existing-row .cell input[type="number"],
-.row.desired-row .cell input[type="number"]{
+.row.desired-row  .cell input[type="number"]{
   width: 100%;
   padding: 10px 12px;
   border:1px solid #dcdde2;
   border-radius:10px;
   font-size:16px;
   background:#fff;
-  height: 44px;           /* サイズと台数の高さをPCでも統一 */
+  height: 44px; /* 同じ高さに統一（PC/タブレット） */
   line-height: 1.2;
 }
 
-/* 既設：設置方角＋削除ボタン横並び */
-.ori-with-action {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
+/* 削除ボタン（既設／施工希望 共通） */
 .inline-delete { white-space: nowrap; }
 
-/* 既設：右端 actions セルは非表示（テンプレから削除済みだが安全策） */
-.row.existing-row .cell.actions { display: none; }
+/* ※ 以前の「既設の削除ボタン非表示」ルールは削除しています */
 
-/* ===== スマホ向け最適化（幅 <= 480px）===== */
+/* ===== スマホ向け（幅 <= 480px） ===== */
 @media (max-width: 480px){
 
-  /* 既設：サイズ／台数／設置方角（+削除は方角セル内） */
+  /* 既設：サイズ／台数／削除（3カラム） */
   .row.existing-row {
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr auto;
     gap: 6px;
     align-items: end;
   }
 
-  .row.existing-row .cell.size select,
-  .row.existing-row .cell.count input[type="number"],
-  .row.existing-row .cell.orientation select {
-    width: 100%;
-    min-width: 0;
-    padding: 8px 10px;
-    font-size: 14px;
-    height: 40px;         /* ★既設の入力高さ：40px */
-    line-height: 1.2;
-  }
-
-  .row.existing-row .ori-with-action {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 6px;
-    align-items: center;
-    width: 100%;
-  }
-  .row.existing-row .ori-with-action select {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  .row.existing-row .inline-delete {
-    flex: 0 0 auto;
-    padding: 6px 8px;
-    border-radius: 10px;
-    border: 1px solid #dcdde2;
-    background: #fafafa;
-    font-size: 12px;
-    height: 34px;         /* ★既設の削除ボタン高さ：34px */
-    line-height: 1;
-  }
-
-  /* 施工希望：サイズ／台数／削除（横並び）。高さは既設に合わせる */
+  /* 施工希望：サイズ／台数／削除（3カラム） */
   .row.desired-row {
     grid-template-columns: 1fr 1fr auto;
-    gap: 6px;             /* 既設と同じ余白 */
+    gap: 6px;
     align-items: end;
   }
 
-  /* ★施工希望の「サイズ」「台数」入力高さを既設（40px）に合わせる */
-  .row.desired-row .cell select,
-  .row.desired-row .cell input[type="number"]{
-    width: 100%;
-    min-width: 0;
+  /* ▼スマホ時も両者で同じ高さに統一 */
+  .row.existing-row .cell select,
+  .row.desired-row  .cell select,
+  .row.existing-row .cell input[type="number"],
+  .row.desired-row  .cell input[type="number"]{
     padding: 8px 10px;
     font-size: 14px;
-    height: 40px;         /* 既設と同じ高さに統一 */
-    line-height: 1.2;
+    height: 40px; /* 同じ高さ（スマホ） */
   }
 
-  /* ★施工希望の削除ボタンの大きさを既設の削除ボタンと同一に */
-  .row.desired-row .actions .btn {
+  /* 削除ボタンを小さめに */
+  .row.existing-row .actions .btn,
+  .row.desired-row  .actions .btn,
+  .inline-delete {
     padding: 6px 8px;
     border-radius: 10px;
     border: 1px solid #dcdde2;
     background: #fafafa;
     font-size: 12px;
-    height: 34px;         /* 既設と同じ 34px */
+    height: 34px;
     line-height: 1;
   }
 }

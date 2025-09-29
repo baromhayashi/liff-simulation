@@ -9,7 +9,7 @@ const SIZES = ["S","M","L","LL","3L","4L","5L","6L","7L","8L"];
 // 係数（α）
 const ALPHA = { S:1, M:1, L:2, LL:3, "3L":5, "4L":8, "5L":13, "6L":21, "7L":34, "8L":55 };
 
-// 基本節電率（南面相当：方角補正なし）
+// 基本節電率（方角補正なし）
 const BASE_SAVING_RATE = { S:8, M:12, L:16, LL:20, "3L":24, "4L":24, "5L":20, "6L":18, "7L":16, "8L":14 };
 
 // 月別係数（空調電力の季節変動）
@@ -35,19 +35,36 @@ const AREA = {
 
 // ▼ジャンル別の既定空調比率（%）
 const GENRE_DEFAULTS = {
-  "オフィスビル": 45,
+  "コンビニエンスストア": 20,
+  "パチンコ店": 50,
   "小売店舗（アパレル・雑貨等）": 30,
-  "スーパー・食品小売": 20,
-  "飲食店（レストラン等）": 25,
+  "オフィスビル": 45,
   "ホテル・宿泊施設": 45,
-  "病院・クリニック": 35,
+  "病院クリニック": 35,
+  "学校・教育施設": 25,
+  "アミューズメント施設（映画館・ゲームセンター）": 40,
+  "フィットネスジム": 35,
+  "スーパー・食品小売り": 20,
   "工場（軽工業系）": 15,
   "工場（重工業系）": 10,
-  "学校・教育施設": 25,
-  "倉庫・物流施設": 10,
-  "アミューズメント施設（映画館・ゲームセンター）": 40,
-  "パチンコ店": 50,
-  "フィットネスジム": 35
+  "倉庫物流施設": 10
+};
+
+// ▼ジャンル別の既定サイズ（ご指定の表に従う）
+const GENRE_SIZE_DEFAULT = {
+  "コンビニエンスストア": "3L",
+  "パチンコ店": "7L",
+  "小売店舗（アパレル・雑貨等）": "L",
+  "オフィスビル": "3L",
+  "ホテル・宿泊施設": "3L",
+  "病院クリニック": "LL",
+  "学校・教育施設": "LL",
+  "アミューズメント施設（映画館・ゲームセンター）": "5L",
+  "フィットネスジム": "4L",
+  "スーパー・食品小売り": "5L",
+  "工場（軽工業系）": "6L",
+  "工場（重工業系）": "7L",
+  "倉庫物流施設": "7L"
 };
 
 // 既設・施工希望（行追加式）
@@ -61,23 +78,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderMonthlyInputs();
   setupBillTypeToggle();
 
-  // ▼ジャンル選択で空調比率を自動反映
+  // ▼ジャンル選択：空調比率＆既設サイズを自動反映（→施工希望へも同期）
   const genreSel = document.getElementById("genre-select");
   const acInput  = document.getElementById("ac-ratio");
   genreSel.addEventListener("change", () => {
     const g = genreSel.value;
+
+    // 空調比率の自動反映（値がある場合のみ）
     if (GENRE_DEFAULTS[g] != null) {
-      acInput.value = GENRE_DEFAULTS[g]; // 自動反映（%は付けない）
+      acInput.value = GENRE_DEFAULTS[g]; // %は付けない（数値のみ）
+    }
+
+    // 室外機サイズ別台数の自動反映（既定サイズ1台）
+    if (GENRE_SIZE_DEFAULT[g]) {
+      const sz = GENRE_SIZE_DEFAULT[g];
+      existingRows = [{ id: cryptoRandomId(), size: sz, count: 1 }];
+      paintExistingRows();
+      syncDesiredFromExisting();
     }
   });
 
   // 既設（サイズ/台数）
   renderExistingList();
-  document.getElementById("add-existing-row").addEventListener("click", addExistingRow);
+  document.getElementById("add-existing-row").addEventListener("click", () => {
+    addExistingRow();
+    syncDesiredFromExisting(); // 追加後に同期
+  });
 
-  // 施工希望（サイズ/台数）— デフォルトで1行
+  // 施工希望（サイズ/台数）— 初期描画（自動同期で上書きされます）
   renderDesiredList();
-  document.getElementById("add-desired-row").addEventListener("click", addDesiredRow);
 
   document.getElementById("simulation-form").addEventListener("submit", onSubmit);
 
@@ -133,7 +162,8 @@ function renderExistingList(){
   const host = document.getElementById("existing-list");
   host.innerHTML = `<div id="existing-rows"></div>`;
   existingRows = [];
-  addExistingRow();
+  addExistingRow();           // 初期行
+  syncDesiredFromExisting();  // 初期同期
 }
 function addExistingRow(){
   const id = cryptoRandomId();
@@ -143,6 +173,7 @@ function addExistingRow(){
 function removeExistingRow(id){
   existingRows = existingRows.filter(r => r.id !== id);
   paintExistingRows();
+  syncDesiredFromExisting();
 }
 function paintExistingRows(){
   const wrap = document.getElementById("existing-rows");
@@ -164,33 +195,32 @@ function paintExistingRows(){
     </div>
   `).join("");
 
-  // イベント付与
+  // 変更のたびに施工希望へ同期
   existingRows.forEach(r => {
-    qs(`#ex-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
-    qs(`#ex-count-${r.id}`).addEventListener("input", e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });
+    qs(`#ex-size-${r.id}`).addEventListener("change", e => {
+      r.size = e.target.value;
+      syncDesiredFromExisting();
+    });
+    qs(`#ex-count-${r.id}`).addEventListener("input", e => {
+      const v = Math.max(0, +e.target.value || 0);
+      r.count = v;
+      e.target.value = v;
+      syncDesiredFromExisting();
+    });
     qs(`#ex-del-${r.id}`).addEventListener("click", () => removeExistingRow(r.id));
   });
 }
 
-// ===== 施工希望：行追加式（デフォルト1行） =====
+// ===== 施工希望：行追加式（自動反映） =====
 function renderDesiredList(){
   const host = document.getElementById("desired-list");
   host.innerHTML = `<div id="desired-rows"></div>`;
-  desiredRows = [];
-  addDesiredRow();
-}
-function addDesiredRow(){
-  const id = cryptoRandomId();
-  desiredRows.push({ id, size: "S", count: 1 });
-  paintDesiredRows();
-}
-function removeDesiredRow(id){
-  desiredRows = desiredRows.filter(r => r.id !== id);
+  desiredRows = []; // 自動同期で再構成
   paintDesiredRows();
 }
 function paintDesiredRows(){
   const wrap = document.getElementById("desired-rows");
-  wrap.innerHTML = desiredRows.map(r => `
+  wrap.innerHTML = (desiredRows.length ? desiredRows : []).map(r => `
     <div class="row desired-row" id="drow-${r.id}">
       <div class="cell">
         <label>サイズ</label>
@@ -208,11 +238,28 @@ function paintDesiredRows(){
     </div>
   `).join("");
 
+  // 手動編集は可能（要件外の仕様変更は行わず、純粋に編集のみ）
   desiredRows.forEach(r => {
     qs(`#des-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
-    qs(`#des-count-${r.id}`).addEventListener("input", e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });
-    qs(`#des-del-${r.id}`).addEventListener("click", () => removeDesiredRow(r.id));
+    qs(`#des-count-${r.id}`).addEventListener("input",  e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });
+    qs(`#des-del-${r.id}`).addEventListener("click",    () => { desiredRows = desiredRows.filter(x => x.id !== r.id); paintDesiredRows(); });
   });
+}
+
+// ===== 既設 → 施工希望 自動同期 =====
+function syncDesiredFromExisting(){
+  // 既設をサイズごとに集計
+  const agg = {}; SIZES.forEach(sz => agg[sz] = 0);
+  existingRows.forEach(r => { agg[r.size] += Math.max(0, Number(r.count) || 0); });
+
+  // 集計結果から施工希望の行を再構成（サイズ順、台数>0のみ）
+  const rows = [];
+  SIZES.forEach(sz => {
+    const c = agg[sz];
+    if (c > 0) rows.push({ id: cryptoRandomId(), size: sz, count: c });
+  });
+  desiredRows = rows;
+  paintDesiredRows();
 }
 
 // =========================
@@ -251,7 +298,7 @@ function onSubmit(e){
   // 実入力がある月だけで平均 → 欠損は季節係数で補完
   const provided = monthlyBills.filter(v => v>0);
   const monthlyAvg = provided.length>0 ? (provided.reduce((a,b)=>a+b,0) / provided.length) : 0;
-  const completedBills = monthlyBills.map((v, idx) => v>0 ? v : monthlyAvg * MONTH_COEF[idx+1]);
+  const completedBills = monthlyBills.map((v, idx) => v>0 ? v : monthlyAvg * (MONTH_COEF[idx+1] || 1));
   const avgBill = completedBills.reduce((a,b)=>a+b,0) / 12;
 
   // --- 空調比率（ジャンル自動適用：入力があれば優先） ---
@@ -259,7 +306,7 @@ function onSubmit(e){
   let acBase;
   if (acInputRaw !== "") {
     acBase = clampPct(+acInputRaw);
-  } else if (GENRE_DEFAULTS.hasOwnProperty(genre)) {
+  } else if (GENRE_DEFAULTS.hasOwnProperty(genre) && GENRE_DEFAULTS[genre] != null) {
     acBase = clampPct(GENRE_DEFAULTS[genre]);
   } else {
     alert("空調比率が未入力です。ジャンルを選択するか、空調比率を入力してください。");
@@ -275,7 +322,7 @@ function onSubmit(e){
     return;
   }
 
-  // --- 施工希望（行）→ サイズ合計 集計 ---
+  // --- 施工希望（行）→ サイズ合計 集計（同期後のdesiredRowsを使用） ---
   const desired = aggregateDesiredRows(desiredRows);
 
   // ========== 削減額計算（方角補正なし） ==========
@@ -286,7 +333,6 @@ function onSubmit(e){
     const beta = {};
     let betaTotal = 0;
 
-    // 台数比率→定数β
     for (const sz of validSizes){
       const units = existing[sz] || 0;
       const ratio = units / totalUnitsAll * 100; // 台数比率[%]
@@ -294,19 +340,16 @@ function onSubmit(e){
       betaTotal += beta[sz];
     }
 
-    // サイズ補正[%]
     const sizeAdj = {};
     for (const sz of validSizes){
       sizeAdj[sz] = beta[sz] / (betaTotal || 1) * 100;
     }
 
-    // サイズ別 月間電気代
     const sizeMonthlyCost = {};
     for (const sz of validSizes){
       sizeMonthlyCost[sz] = acCostMonthly * (sizeAdj[sz]/100);
     }
 
-    // サイズ別 節電率（方角補正なし＝基準値）
     const sizeSaving = {};
     for (const sz of validSizes){
       const rate = BASE_SAVING_RATE[sz] || 0;
@@ -316,7 +359,7 @@ function onSubmit(e){
     const totalSaving = Object.values(sizeSaving).reduce((a,b)=>a+b,0);
     const totalSavingPct = avgBill>0 ? (totalSaving / avgBill * 100) : 0;
 
-    // 年間想定削減額（平均×係数×節電率の合計）
+    // 年間想定削減額
     let annualSaving = 0;
     for (let m=1; m<=12; m++){ annualSaving += (avgBill * (MONTH_COEF[m] || 1)) * (totalSavingPct/100); }
     const monthlySavingAvg = annualSaving / 12;

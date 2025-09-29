@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     syncDesiredFromExisting(); // 追加後に同期
   });
 
-  // 施工希望（サイズ/台数）— 初期描画（自動同期で上書きされます）
+  // 施工希望（サイズ/台数）— 初期描画（同期結果を表示）
   renderDesiredList();
 
   document.getElementById("simulation-form").addEventListener("submit", onSubmit);
@@ -215,7 +215,7 @@ function paintExistingRows(){
 function renderDesiredList(){
   const host = document.getElementById("desired-list");
   host.innerHTML = `<div id="desired-rows"></div>`;
-  desiredRows = []; // 自動同期で再構成
+  // ★ここで desiredRows をクリアしない（初期同期の結果を消さない）
   paintDesiredRows();
 }
 function paintDesiredRows(){

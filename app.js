@@ -406,9 +406,13 @@ function onSubmit(e){
 
   const commentFast   = `👉 最短${monthsMin}ヶ月で投資回収！`;
   const commentAnnual = `👉 年間${fmtManYen(annualMax)}以上の削減効果も期待できます！`;
+
+  // ★ 最短〇年以内コメント（monthsMin を年換算で切り上げ）
+  const yearsWithin = Math.ceil(monthsMin / 12);
+  const commentYear  = `📌 最短${yearsWithin}年以内に投資回収 → その後はずっとプラス効果！`;
   // ---- ここまで整形 ----
 
-  // ========== 結果描画（レンジ表記＋CTAボタン） ==========
+  // ========== 結果描画（レンジ表記＋CTAボタン＋一言コメント） ==========
   const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">
@@ -428,6 +432,11 @@ function onSubmit(e){
         <a class="form-btn" href="https://xs161700.xsrv.jp/terano-tech/contact/" target="_blank" rel="noopener">
           無料の本見積依頼はこちら
         </a>
+      </div>
+
+      <!-- 一言コメント（ページ最後） -->
+      <div style="margin-top:12px; color:#333;">
+        ${commentYear}
       </div>
     </div>
   `;

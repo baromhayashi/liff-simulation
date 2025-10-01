@@ -460,7 +460,13 @@ function onSubmit(e){
     </div>
   `;
 
-  qs("#result-area").style.display = "";
+  // 結果セクションを表示してからスムーズスクロール
+  const resultArea = document.getElementById("result-area");
+  resultArea.style.display = "";
+  // レイアウト反映後にスクロール（微小ディレイで確実に）
+  setTimeout(() => {
+    resultArea.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 0);
 }
 
 // =========================

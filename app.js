@@ -406,13 +406,11 @@ function onSubmit(e){
 
   const commentFast   = `👉 最短${monthsMin}ヶ月で投資回収！`;
   const commentAnnual = `👉 年間${fmtManYen(annualMax)}以上の削減効果も期待できます！`;
-
-  // ★ 最短〇年以内コメント（monthsMin を年換算で切り上げ）
   const yearsWithin = Math.ceil(monthsMin / 12);
   const commentYear  = `📌 最短${yearsWithin}年以内に投資回収 → その後はずっとプラス効果！`;
   // ---- ここまで整形 ----
 
-  // ========== 結果描画（レンジ表記＋CTAボタン＋一言コメント） ==========
+  // ========== 結果描画（レンジ表記＋一言コメント＋CTA） ==========
   const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">
@@ -422,21 +420,42 @@ function onSubmit(e){
         <div><span>年間削減額</span><strong>${fmtManYen(annualMin)}～${fmtManYen(annualMax)}</strong></div>
         <div><span>回収期間</span><strong>${monthsMin}ヶ月～${monthsMax}ヶ月</strong></div>
       </div>
-      <div style="margin-top:10px;">
+
+      <!-- 一言コメント群（★ボタンより上に配置） -->
+      <div style="margin-top:12px;">
         <div>${commentFast}</div>
         <div>${commentAnnual}</div>
+        <div style="margin-top:8px; color:#333;">${commentYear}</div>
       </div>
 
-      <!-- CTA：本見積依頼ボタン -->
-      <div style="margin-top:16px;">
-        <a class="form-btn" href="https://xs161700.xsrv.jp/terano-tech/contact/" target="_blank" rel="noopener">
-          無料の本見積依頼はこちら
+      <!-- 小見出し（2行・強調） -->
+      <div style="margin-top:18px; text-align:center;">
+        <div style="font-weight:800; font-size:18px; line-height:1.3;">専門家があなたの施設に最適な</div>
+        <div style="font-weight:800; font-size:18px; line-height:1.3;">削減プランを無料ご提案！</div>
+      </div>
+
+      <!-- CTA：本見積依頼ボタン（アクセントカラー＋影） -->
+      <div style="margin-top:12px; text-align:center;">
+        <a
+          class="cta-estimate"
+          href="https://xs161700.xsrv.jp/terano-tech/contact/"
+          target="_blank" rel="noopener"
+          style="
+            display:inline-flex; align-items:center; justify-content:center; gap:8px;
+            padding:14px 20px; font-size:16px; font-weight:700;
+            color:#fff; text-decoration:none; border-radius:12px;
+            background:#FF7043; /* アクセントカラー：濃いオレンジ */
+            box-shadow: 0 6px 16px rgba(255,112,67,0.35);
+            transition: transform .05s ease, box-shadow .15s ease;
+          "
+          onmouseover="this.style.boxShadow='0 8px 20px rgba(255,112,67,0.45)';"
+          onmouseout="this.style.boxShadow='0 6px 16px rgba(255,112,67,0.35)';"
+          onmousedown="this.style.transform='translateY(1px)';"
+          onmouseup="this.style.transform='translateY(0)';"
+        >
+          <span>無料の本見積もり依頼はこちら</span>
+          <span aria-hidden="true">＞</span>
         </a>
-      </div>
-
-      <!-- 一言コメント（ページ最後） -->
-      <div style="margin-top:12px; color:#333;">
-        ${commentYear}
       </div>
     </div>
   `;

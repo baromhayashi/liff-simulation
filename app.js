@@ -98,13 +98,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // ★順序を入れ替え：先に施工希望（コンテナ生成）→ 次に既設（同期が走ってもOK）
+  // 施工希望 → 既設（順序を保証）
   renderDesiredList();   // 施工希望コンテナを先に作成
-  renderExistingList();  // 既設の描画（内部で初期同期あり）
+  renderExistingList();  // 初期同期あり
 
   document.getElementById("add-existing-row").addEventListener("click", () => {
     addExistingRow();
-    syncDesiredFromExisting(); // 追加後に同期
+    syncDesiredFromExisting();
   });
 
   document.getElementById("simulation-form").addEventListener("submit", onSubmit);
@@ -215,12 +215,11 @@ function paintExistingRows(){
 function renderDesiredList(){
   const host = document.getElementById("desired-list");
   host.innerHTML = `<div id="desired-rows"></div>`;
-  // 初期同期の結果を消さないため、ここで desiredRows はクリアしない
   paintDesiredRows();
 }
 function paintDesiredRows(){
   const wrap = document.getElementById("desired-rows");
-  if (!wrap) return; // ★存在チェックを追加（安全策）
+  if (!wrap) return; // 安全策
   wrap.innerHTML = (desiredRows.length ? desiredRows : []).map(r => `
     <div class="row desired-row" id="drow-${r.id}">
       <div class="cell">
@@ -393,42 +392,41 @@ function onSubmit(e){
     };
   });
 
-  // ========== 結果描画 ==========
+  // ---- ここから結果の「レンジ表記」整形 ----
+  const annuals = resultRows.map(r => r.annualSaving).filter(Number.isFinite);
+  const months  = resultRows.map(r => r.paybackMonths).filter(v => v != null);
+
+  const annualMin = Math.min(...annuals);
+  const annualMax = Math.max(...annuals);
+  const monthsMin = Math.min(...months);
+  const monthsMax = Math.max(...months);
+
+  // 表示用フォーマット
+  const fmtYen = (x) => {
+    const n = ceilMoney(+x || 0);
+    return n.toLocaleString("ja-JP") + "円";
+  };
+  // 万円表記（少し控えめに見せるため切り上げではなく切り捨て）
+  const fmtManYen = (x) => Math.floor((+x || 0) / 10000).toLocaleString("ja-JP") + "万円";
+
+  // コメント文（最短回収と最大年間削減）
+  const commentFast   = `👉 最短${monthsMin}ヶ月で投資回収！`;
+  const commentAnnual = `👉 年間${fmtManYen(annualMax)}以上の削減効果も期待できます！`;
+  // ---- ここまで整形 ----
+
+  // ========== 結果描画（レンジ表記版） ==========
   const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">
-      <h3>前提まとめ</h3>
+      <h3>シミュレーション結果</h3>
       <div class="kv">
-        <div><span>月間平均電気代</span><strong>${fmtYen(avgBill)}</strong></div>
+        <div><span>導入費用（税別）</span><strong>${fmtYen(introduceCost)}</strong></div>
+        <div><span>年間削減額</span><strong>${fmtManYen(annualMin)}～${fmtManYen(annualMax)}</strong></div>
+        <div><span>回収期間</span><strong>${monthsMin}ヶ月～${monthsMax}ヶ月</strong></div>
       </div>
-    </div>
-
-    <div class="result-block">
-      <h3>導入費用（税別）</h3>
-      <div class="kv">
-        <div class="total"><span>導入費用</span><strong>${fmtYen(introduceCost)}</strong></div>
-      </div>
-    </div>
-
-    <div class="result-block">
-      <h3>削減額と回収期間（空調比率 3パターン）</h3>
-      <div class="table-scroll">
-        <table class="table">
-          <thead>
-            <tr><th>空調比率</th><th>全体節電率</th><th>月間削減額</th><th>年間削減額</th><th>回収期間</th></tr>
-          </thead>
-          <tbody>
-            ${resultRows.map(r => `
-              <tr>
-                <td>${r.acPct}%</td>
-                <td>${r.savingPct}%</td>
-                <td>${fmtYen(r.monthlySaving)}</td>
-                <td>${fmtYen(r.annualSaving)}</td>
-                <td>${r.paybackMonths !== null ? r.paybackMonths + " か月" : "算出不可"}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
+      <div style="margin-top:10px;">
+        <div>${commentFast}</div>
+        <div>${commentAnnual}</div>
       </div>
     </div>
   `;
@@ -443,7 +441,7 @@ function gv(id){ return document.getElementById(id).value; }
 function qs(sel){ return document.querySelector(sel); }
 function cryptoRandomId(){ return 'xxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)); }
 function clampPct(x){ if (isNaN(x)) return 0; return Math.max(0, Math.min(100, x)); }
-function fmtYen(x){ const n = ceilMoney(+x || 0); return n.toLocaleString("ja-JP") + " 円"; }
+function fmtYenAll(x){ const n = ceilMoney(+x || 0); return n.toLocaleString("ja-JP") + " 円"; } // ※未使用だが互換のため残置
 
 /** 行式 -> サイズ合計に集計（既設） */
 function aggregateExistingRows(rows){

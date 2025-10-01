@@ -392,7 +392,7 @@ function onSubmit(e){
     };
   });
 
-  // ---- ここから結果の「レンジ表記」整形 ----
+  // ---- レンジ表記用の整形 ----
   const annuals = resultRows.map(r => r.annualSaving).filter(Number.isFinite);
   const months  = resultRows.map(r => r.paybackMonths).filter(v => v != null);
 
@@ -401,20 +401,14 @@ function onSubmit(e){
   const monthsMin = Math.min(...months);
   const monthsMax = Math.max(...months);
 
-  // 表示用フォーマット
-  const fmtYen = (x) => {
-    const n = ceilMoney(+x || 0);
-    return n.toLocaleString("ja-JP") + "円";
-  };
-  // 万円表記（少し控えめに見せるため切り上げではなく切り捨て）
+  const fmtYen = (x) => (Math.ceil(+x || 0)).toLocaleString("ja-JP") + "円";
   const fmtManYen = (x) => Math.floor((+x || 0) / 10000).toLocaleString("ja-JP") + "万円";
 
-  // コメント文（最短回収と最大年間削減）
   const commentFast   = `👉 最短${monthsMin}ヶ月で投資回収！`;
   const commentAnnual = `👉 年間${fmtManYen(annualMax)}以上の削減効果も期待できます！`;
   // ---- ここまで整形 ----
 
-  // ========== 結果描画（レンジ表記版） ==========
+  // ========== 結果描画（レンジ表記＋CTAボタン） ==========
   const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">
@@ -427,6 +421,13 @@ function onSubmit(e){
       <div style="margin-top:10px;">
         <div>${commentFast}</div>
         <div>${commentAnnual}</div>
+      </div>
+
+      <!-- CTA：本見積依頼ボタン -->
+      <div style="margin-top:16px;">
+        <a class="form-btn" href="https://xs161700.xsrv.jp/terano-tech/contact/" target="_blank" rel="noopener">
+          無料の本見積依頼はこちら
+        </a>
       </div>
     </div>
   `;
@@ -441,7 +442,7 @@ function gv(id){ return document.getElementById(id).value; }
 function qs(sel){ return document.querySelector(sel); }
 function cryptoRandomId(){ return 'xxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)); }
 function clampPct(x){ if (isNaN(x)) return 0; return Math.max(0, Math.min(100, x)); }
-function fmtYenAll(x){ const n = ceilMoney(+x || 0); return n.toLocaleString("ja-JP") + " 円"; } // ※未使用だが互換のため残置
+function fmtYenAll(x){ const n = ceilMoney(+x || 0); return n.toLocaleString("ja-JP") + " 円"; } // 互換用
 
 /** 行式 -> サイズ合計に集計（既設） */
 function aggregateExistingRows(rows){

@@ -98,15 +98,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // 既設（サイズ/台数）
-  renderExistingList();
+  // ★順序を入れ替え：先に施工希望（コンテナ生成）→ 次に既設（同期が走ってもOK）
+  renderDesiredList();   // 施工希望コンテナを先に作成
+  renderExistingList();  // 既設の描画（内部で初期同期あり）
+
   document.getElementById("add-existing-row").addEventListener("click", () => {
     addExistingRow();
     syncDesiredFromExisting(); // 追加後に同期
   });
-
-  // 施工希望（サイズ/台数）— 初期描画（同期結果を表示）
-  renderDesiredList();
 
   document.getElementById("simulation-form").addEventListener("submit", onSubmit);
 
@@ -177,6 +176,7 @@ function removeExistingRow(id){
 }
 function paintExistingRows(){
   const wrap = document.getElementById("existing-rows");
+  if (!wrap) return;
   wrap.innerHTML = existingRows.map(r => `
     <div class="row existing-row" id="row-${r.id}">
       <div class="cell size">
@@ -215,11 +215,12 @@ function paintExistingRows(){
 function renderDesiredList(){
   const host = document.getElementById("desired-list");
   host.innerHTML = `<div id="desired-rows"></div>`;
-  // ★ここで desiredRows をクリアしない（初期同期の結果を消さない）
+  // 初期同期の結果を消さないため、ここで desiredRows はクリアしない
   paintDesiredRows();
 }
 function paintDesiredRows(){
   const wrap = document.getElementById("desired-rows");
+  if (!wrap) return; // ★存在チェックを追加（安全策）
   wrap.innerHTML = (desiredRows.length ? desiredRows : []).map(r => `
     <div class="row desired-row" id="drow-${r.id}">
       <div class="cell">
@@ -238,7 +239,7 @@ function paintDesiredRows(){
     </div>
   `).join("");
 
-  // 手動編集は可能（要件外の仕様変更は行わず、純粋に編集のみ）
+  // 手動編集も可能
   desiredRows.forEach(r => {
     qs(`#des-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
     qs(`#des-count-${r.id}`).addEventListener("input",  e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });

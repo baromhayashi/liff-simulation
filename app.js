@@ -78,17 +78,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderMonthlyInputs();
   setupBillTypeToggle();
 
-  // ▼ジャンル選択：空調比率＆既設サイズを自動反映（→施工希望へも同期）
+  // ▼ジャンル選択：空調比率は「自動入力しない」／既設サイズの自動反映は継続
   const genreSel = document.getElementById("genre-select");
+  // 入力欄のプレースホルダを更新（文言のみ）
   const acInput  = document.getElementById("ac-ratio");
+  if (acInput) acInput.placeholder = "例：25（不明な場合は空欄で問題ありません）";
+
   genreSel.addEventListener("change", () => {
     const g = genreSel.value;
-
-    // 空調比率の自動反映（値がある場合のみ）
-    if (GENRE_DEFAULTS[g] != null) {
-      acInput.value = GENRE_DEFAULTS[g]; // %は付けない（数値のみ）
-    }
-
+    // ※ここでは acInput.value を設定しない（自動入力しない）
     // 室外機サイズ別台数の自動反映（既定サイズ1台）
     if (GENRE_SIZE_DEFAULT[g]) {
       const sz = GENRE_SIZE_DEFAULT[g];
@@ -98,9 +96,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // 施工希望 → 既設（順序を保証）
-  renderDesiredList();   // 施工希望コンテナを先に作成
-  renderExistingList();  // 初期同期あり
+  // 施工希望（DOMコンテナ生成）→ 既設（初期同期あり）
+  renderDesiredList();
+  renderExistingList();
+
+  // 施工希望セクションを非表示（裏では計算に使用）
+  const desiredHost = document.getElementById("desired-list");
+  const desiredSection = desiredHost ? desiredHost.closest(".form-section") : null;
+  if (desiredSection) desiredSection.style.display = "none";
 
   document.getElementById("add-existing-row").addEventListener("click", () => {
     addExistingRow();
@@ -211,7 +214,7 @@ function paintExistingRows(){
   });
 }
 
-// ===== 施工希望：行追加式（自動反映） =====
+// ===== 施工希望：行追加式（自動反映／非表示で保持） =====
 function renderDesiredList(){
   const host = document.getElementById("desired-list");
   host.innerHTML = `<div id="desired-rows"></div>`;
@@ -220,6 +223,7 @@ function renderDesiredList(){
 function paintDesiredRows(){
   const wrap = document.getElementById("desired-rows");
   if (!wrap) return; // 安全策
+  // 非表示でも裏で保持するため、DOMは更新しておく（ユーザーには見えない）
   wrap.innerHTML = (desiredRows.length ? desiredRows : []).map(r => `
     <div class="row desired-row" id="drow-${r.id}">
       <div class="cell">
@@ -238,7 +242,7 @@ function paintDesiredRows(){
     </div>
   `).join("");
 
-  // 手動編集も可能
+  // 手動編集は不要だが、互換のためイベントは付与（非表示なので実質操作不可）
   desiredRows.forEach(r => {
     qs(`#des-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
     qs(`#des-count-${r.id}`).addEventListener("input",  e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });
@@ -301,13 +305,13 @@ function onSubmit(e){
   const completedBills = monthlyBills.map((v, idx) => v>0 ? v : monthlyAvg * (MONTH_COEF[idx+1] || 1));
   const avgBill = completedBills.reduce((a,b)=>a+b,0) / 12;
 
-  // --- 空調比率（ジャンル自動適用：入力があれば優先） ---
+  // --- 空調比率（ジャンル自動適用：入力があれば優先。ただし「自動入力」はしない） ---
   const acInputRaw = gv("ac-ratio").trim();
   let acBase;
   if (acInputRaw !== "") {
     acBase = clampPct(+acInputRaw);
   } else if (GENRE_DEFAULTS.hasOwnProperty(genre) && GENRE_DEFAULTS[genre] != null) {
-    acBase = clampPct(GENRE_DEFAULTS[genre]);
+    acBase = clampPct(GENRE_DEFAULTS[genre]); // 入力欄は空のままでも内部適用
   } else {
     alert("空調比率が未入力です。ジャンルを選択するか、空調比率を入力してください。");
     return;
@@ -322,7 +326,7 @@ function onSubmit(e){
     return;
   }
 
-  // --- 施工希望（行）→ サイズ合計 集計（同期後のdesiredRowsを使用） ---
+  // --- 施工希望（行）→ サイズ合計 集計（非表示だが内部保持） ---
   const desired = aggregateDesiredRows(desiredRows);
 
   // ========== 削減額計算（方角補正なし） ==========
@@ -386,29 +390,29 @@ function onSubmit(e){
     return {
       acPct: sc.acPct,
       savingPct: roundPct1(sc.totalSavingPct),
-      monthlySaving: ceilMoney(sc.monthlySavingAvg),
-      annualSaving:  ceilMoney(sc.annualSaving),
-      paybackMonths: Number.isFinite(monthsPayback) ? ceilMonths(monthsPayback) : null
+      monthlySaving:  ceilMoney(sc.monthlySavingAvg),
+      annualSaving:   ceilMoney(sc.annualSaving),
+      paybackMonths:  Number.isFinite(monthsPayback) ? ceilMonths(monthsPayback) : null
     };
   });
 
-  // ---- レンジ表記用の整形 ----
-  const annuals = resultRows.map(r => r.annualSaving).filter(Number.isFinite);
-  const months  = resultRows.map(r => r.paybackMonths).filter(v => v != null);
+  // ---- レンジ表記用の整形（前回版のまま） ----
+  const annuals   = resultRows.map(r => r.annualSaving).filter(Number.isFinite);
+  const monthsArr = resultRows.map(r => r.paybackMonths).filter(v => v != null);
 
   const annualMin = Math.min(...annuals);
   const annualMax = Math.max(...annuals);
-  const monthsMin = Math.min(...months);
-  const monthsMax = Math.max(...months);
+  const monthsMin = Math.min(...monthsArr);
+  const monthsMax = Math.max(...monthsArr);
 
   const fmtYen = (x) => (Math.ceil(+x || 0)).toLocaleString("ja-JP") + "円";
   const fmtManYen = (x) => Math.floor((+x || 0) / 10000).toLocaleString("ja-JP") + "万円";
 
   const commentFast   = `👉 最短${monthsMin}ヶ月で投資回収！`;
   const commentAnnual = `👉 年間${fmtManYen(annualMax)}以上の削減効果も期待できます！`;
-  const yearsWithin = Math.ceil(monthsMin / 12);
-  const commentYear  = `📌 最短${yearsWithin}年以内に投資回収 → その後はずっとプラス効果！`;
-  // ---- ここまで整形 ----
+  const yearsWithin   = Math.ceil(monthsMin / 12);
+  const commentYear   = `📌 最短${yearsWithin}年以内に投資回収 → その後はずっとプラス効果！`;
+  // --------------------------------------------
 
   // ========== 結果描画（レンジ表記＋一言コメント＋CTA） ==========
   const res = qs("#result-content");
@@ -421,7 +425,7 @@ function onSubmit(e){
         <div><span>回収期間</span><strong>${monthsMin}ヶ月～${monthsMax}ヶ月</strong></div>
       </div>
 
-      <!-- 一言コメント群（★ボタンより上に配置） -->
+      <!-- 一言コメント群（ボタンより上） -->
       <div style="margin-top:12px;">
         <div>${commentFast}</div>
         <div>${commentAnnual}</div>
@@ -434,7 +438,7 @@ function onSubmit(e){
         <div style="font-weight:800; font-size:18px; line-height:1.3;">削減プランを無料ご提案！</div>
       </div>
 
-      <!-- CTA：本見積依頼ボタン（アクセントカラー＋影） -->
+      <!-- CTA：本見積依頼ボタン -->
       <div style="margin-top:12px; text-align:center;">
         <a
           class="cta-estimate"
@@ -444,8 +448,7 @@ function onSubmit(e){
             display:inline-flex; align-items:center; justify-content:center; gap:8px;
             padding:14px 20px; font-size:16px; font-weight:700;
             color:#fff; text-decoration:none; border-radius:12px;
-            background:#FF7043; /* アクセントカラー：濃いオレンジ */
-            box-shadow: 0 6px 16px rgba(255,112,67,0.35);
+            background:#FF7043; box-shadow: 0 6px 16px rgba(255,112,67,0.35);
             transition: transform .05s ease, box-shadow .15s ease;
           "
           onmouseover="this.style.boxShadow='0 8px 20px rgba(255,112,67,0.45)';"
@@ -460,10 +463,9 @@ function onSubmit(e){
     </div>
   `;
 
-  // 結果セクションを表示してからスムーズスクロール
+  // 結果セクションを表示してスムーズスクロール
   const resultArea = document.getElementById("result-area");
   resultArea.style.display = "";
-  // レイアウト反映後にスクロール（微小ディレイで確実に）
   setTimeout(() => {
     resultArea.scrollIntoView({ behavior: "smooth", block: "start" });
   }, 0);
@@ -476,7 +478,6 @@ function gv(id){ return document.getElementById(id).value; }
 function qs(sel){ return document.querySelector(sel); }
 function cryptoRandomId(){ return 'xxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)); }
 function clampPct(x){ if (isNaN(x)) return 0; return Math.max(0, Math.min(100, x)); }
-function fmtYenAll(x){ const n = ceilMoney(+x || 0); return n.toLocaleString("ja-JP") + " 円"; } // 互換用
 
 /** 行式 -> サイズ合計に集計（既設） */
 function aggregateExistingRows(rows){

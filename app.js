@@ -78,16 +78,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderMonthlyInputs();
   setupBillTypeToggle();
 
-  // ▼ジャンル選択：空調比率は「自動入力しない」／既設サイズの自動反映は継続
+  // ▼ジャンル選択：空調比率は自動入力しない／既設サイズのみ自動反映
   const genreSel = document.getElementById("genre-select");
-  // 入力欄のプレースホルダを更新（文言のみ）
   const acInput  = document.getElementById("ac-ratio");
-  if (acInput) acInput.placeholder = "例：25（不明な場合は空欄で問題ありません）";
+  if (acInput) acInput.placeholder = "例：25（不明時は空欄で可）";
 
   genreSel.addEventListener("change", () => {
     const g = genreSel.value;
-    // ※ここでは acInput.value を設定しない（自動入力しない）
-    // 室外機サイズ別台数の自動反映（既定サイズ1台）
+    // 空調比率の自動入力は行わない（内部では送信時に既定値参照）
     if (GENRE_SIZE_DEFAULT[g]) {
       const sz = GENRE_SIZE_DEFAULT[g];
       existingRows = [{ id: cryptoRandomId(), size: sz, count: 1 }];
@@ -100,7 +98,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderDesiredList();
   renderExistingList();
 
-  // 施工希望セクションを非表示（裏では計算に使用）
+  // 施工希望セクションを非表示（裏の計算では使用）
   const desiredHost = document.getElementById("desired-list");
   const desiredSection = desiredHost ? desiredHost.closest(".form-section") : null;
   if (desiredSection) desiredSection.style.display = "none";
@@ -305,7 +303,7 @@ function onSubmit(e){
   const completedBills = monthlyBills.map((v, idx) => v>0 ? v : monthlyAvg * (MONTH_COEF[idx+1] || 1));
   const avgBill = completedBills.reduce((a,b)=>a+b,0) / 12;
 
-  // --- 空調比率（ジャンル自動適用：入力があれば優先。ただし「自動入力」はしない） ---
+  // --- 空調比率（入力があれば優先。空欄ならジャンル既定値を内部適用） ---
   const acInputRaw = gv("ac-ratio").trim();
   let acBase;
   if (acInputRaw !== "") {

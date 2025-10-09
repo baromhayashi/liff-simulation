@@ -3,8 +3,9 @@
 // =========================
 const LIFF_ID = "YOUR_LIFF_ID_HERE"; // 必要時に設定
 
-// サイズ一覧（LLで統一）
+// サイズ一覧（※UIの標準選択肢。内部用に "UNKNOWN" を追加で扱う）
 const SIZES = ["S","M","L","LL","3L","4L","5L","6L","7L","8L"];
+const UNKNOWN_VALUE = "UNKNOWN"; // 「わからない」の内部値
 
 // 係数（α）
 const ALPHA = { S:1, M:1, L:2, LL:3, "3L":5, "4L":8, "5L":13, "6L":21, "7L":34, "8L":55 };
@@ -68,7 +69,7 @@ const GENRE_SIZE_DEFAULT = {
 };
 
 // 既設・施工希望（行追加式）
-let existingRows = []; // {id, size, count}
+let existingRows = []; // {id, size, count} // size は SIZES 値 or "UNKNOWN"
 let desiredRows  = []; // {id, size, count}
 
 // =========================
@@ -85,7 +86,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   genreSel.addEventListener("change", () => {
     const g = genreSel.value;
-    // 空調比率の自動入力は行わない（内部では送信時に既定値参照）
+    // 空調比率の自動入力はしない（内部は送信時に参照）
+    // 室外機サイズ別台数の自動反映（既定サイズ1台）
     if (GENRE_SIZE_DEFAULT[g]) {
       const sz = GENRE_SIZE_DEFAULT[g];
       existingRows = [{ id: cryptoRandomId(), size: sz, count: 1 }];
@@ -111,11 +113,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("simulation-form").addEventListener("submit", onSubmit);
 
   if (window.liff && LIFF_ID && LIFF_ID !== "YOUR_LIFF_ID_HERE") {
-    try {
-      await liff.init({ liffId: LIFF_ID });
-    } catch (e) {
-      console.warn("LIFF init failed:", e);
-    }
+    try { await liff.init({ liffId: LIFF_ID }); } catch (e) { console.warn("LIFF init failed:", e); }
   }
 });
 
@@ -167,13 +165,20 @@ function renderExistingList(){
 }
 function addExistingRow(){
   const id = cryptoRandomId();
-  existingRows.push({ id, size: "S", count: 1 });
+  // 追加行は「わからない」初期値にすると入力がやさしい
+  existingRows.push({ id, size: UNKNOWN_VALUE, count: 1 });
   paintExistingRows();
 }
 function removeExistingRow(id){
   existingRows = existingRows.filter(r => r.id !== id);
   paintExistingRows();
   syncDesiredFromExisting();
+}
+function sizeOptionsHtml(current){
+  // 先頭に「わからない」
+  const unknownOpt = `<option value="${UNKNOWN_VALUE}" ${current===UNKNOWN_VALUE?'selected':''}>わからない</option>`;
+  const sizeOpts   = SIZES.map(sz => `<option value="${sz}" ${sz===current?'selected':''}>${sz}</option>`).join("");
+  return unknownOpt + sizeOpts;
 }
 function paintExistingRows(){
   const wrap = document.getElementById("existing-rows");
@@ -183,7 +188,7 @@ function paintExistingRows(){
       <div class="cell size">
         <label>サイズ</label>
         <select id="ex-size-${r.id}">
-          ${SIZES.map(sz => `<option value="${sz}" ${sz===r.size?'selected':''}>${sz}</option>`).join("")}
+          ${sizeOptionsHtml(r.size)}
         </select>
       </div>
       <div class="cell count">
@@ -198,15 +203,10 @@ function paintExistingRows(){
 
   // 変更のたびに施工希望へ同期
   existingRows.forEach(r => {
-    qs(`#ex-size-${r.id}`).addEventListener("change", e => {
-      r.size = e.target.value;
-      syncDesiredFromExisting();
-    });
+    qs(`#ex-size-${r.id}`).addEventListener("change", e => { r.size = e.target.value; syncDesiredFromExisting(); });
     qs(`#ex-count-${r.id}`).addEventListener("input", e => {
       const v = Math.max(0, +e.target.value || 0);
-      r.count = v;
-      e.target.value = v;
-      syncDesiredFromExisting();
+      r.count = v; e.target.value = v; syncDesiredFromExisting();
     });
     qs(`#ex-del-${r.id}`).addEventListener("click", () => removeExistingRow(r.id));
   });
@@ -221,13 +221,12 @@ function renderDesiredList(){
 function paintDesiredRows(){
   const wrap = document.getElementById("desired-rows");
   if (!wrap) return; // 安全策
-  // 非表示でも裏で保持するため、DOMは更新しておく（ユーザーには見えない）
   wrap.innerHTML = (desiredRows.length ? desiredRows : []).map(r => `
     <div class="row desired-row" id="drow-${r.id}">
       <div class="cell">
         <label>サイズ</label>
         <select id="des-size-${r.id}">
-          ${SIZES.map(sz => `<option value="${sz}" ${sz===r.size?'selected':''}>${sz}</option>`).join("")}
+          ${sizeOptionsHtml(r.size)}
         </select>
       </div>
       <div class="cell">
@@ -240,7 +239,7 @@ function paintDesiredRows(){
     </div>
   `).join("");
 
-  // 手動編集は不要だが、互換のためイベントは付与（非表示なので実質操作不可）
+  // 非表示だが互換のためイベントは付与
   desiredRows.forEach(r => {
     qs(`#des-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
     qs(`#des-count-${r.id}`).addEventListener("input",  e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });
@@ -248,18 +247,26 @@ function paintDesiredRows(){
   });
 }
 
-// ===== 既設 → 施工希望 自動同期 =====
+// ===== 既設 → 施工希望 自動同期（わからない→ジャンル既定サイズに読み替え） =====
 function syncDesiredFromExisting(){
-  // 既設をサイズごとに集計
+  const genre = gv("genre-select").trim();
+  const defaultSize = GENRE_SIZE_DEFAULT[genre] || null;
+
+  // 既設をサイズごとに集計（UNKNOWN はジャンル既定サイズに読み替え）
   const agg = {}; SIZES.forEach(sz => agg[sz] = 0);
-  existingRows.forEach(r => { agg[r.size] += Math.max(0, Number(r.count) || 0); });
+  existingRows.forEach(r => {
+    let sz = r.size;
+    if (sz === UNKNOWN_VALUE) {
+      // ジャンル未選択や既定なしの場合は安全のため L 扱い（※送信時にはジャンル必須で弾くため通常は通らない）
+      sz = defaultSize || "L";
+    }
+    if (!agg.hasOwnProperty(sz)) agg[sz] = 0;
+    agg[sz] += Math.max(0, Number(r.count) || 0);
+  });
 
   // 集計結果から施工希望の行を再構成（サイズ順、台数>0のみ）
   const rows = [];
-  SIZES.forEach(sz => {
-    const c = agg[sz];
-    if (c > 0) rows.push({ id: cryptoRandomId(), size: sz, count: c });
-  });
+  SIZES.forEach(sz => { if ((agg[sz]||0) > 0) rows.push({ id: cryptoRandomId(), size: sz, count: agg[sz] }); });
   desiredRows = rows;
   paintDesiredRows();
 }
@@ -288,10 +295,7 @@ function onSubmit(e){
   const monthlyMode = qs("#radio-monthly").checked;
   let monthlyBills = [];
   if (monthlyMode){
-    for (let m=1; m<=12; m++){
-      const v = +gv(`bill-${m}`) || 0;
-      monthlyBills.push(v);
-    }
+    for (let m=1; m<=12; m++){ monthlyBills.push(+gv(`bill-${m}`) || 0); }
   } else {
     const avg = +gv("annual-bill") || 0;
     monthlyBills = Array(12).fill(avg);
@@ -309,59 +313,51 @@ function onSubmit(e){
   if (acInputRaw !== "") {
     acBase = clampPct(+acInputRaw);
   } else if (GENRE_DEFAULTS.hasOwnProperty(genre) && GENRE_DEFAULTS[genre] != null) {
-    acBase = clampPct(GENRE_DEFAULTS[genre]); // 入力欄は空のままでも内部適用
+    acBase = clampPct(GENRE_DEFAULTS[genre]);
   } else {
     alert("空調比率が未入力です。ジャンルを選択するか、空調比率を入力してください。");
     return;
   }
   const acVariants = [ clampPct(acBase-5), acBase, clampPct(acBase+5) ];
 
-  // --- 既設（行）→ サイズ合計 集計（方角なし） ---
-  const existing = aggregateExistingRows(existingRows); // {size: count}
-  const totalUnitsAll = SIZES.reduce((acc, sz) => acc + (existing[sz] || 0), 0);
+  // --- 既設（行）→ サイズ合計 集計（UNKNOWN は既定サイズに読み替え済みの desiredRows を使用） ---
+  // desiredRows は syncDesiredFromExisting() で UNKNOWN を解決済み
+  const existingAgg = aggregateExistingRowsResolved(existingRows, genre);
+  const totalUnitsAll = Object.values(existingAgg).reduce((a,b)=>a+(b||0),0);
   if (totalUnitsAll === 0){
     alert("室外機サイズ別台数を1件以上入力してください。");
     return;
   }
 
-  // --- 施工希望（行）→ サイズ合計 集計（非表示だが内部保持） ---
+  // --- 施工希望（行）→ サイズ合計（内部保持）
   const desired = aggregateDesiredRows(desiredRows);
 
   // ========== 削減額計算（方角補正なし） ==========
   const scenarios = acVariants.map(acPct => {
     const acCostMonthly = avgBill * (acPct/100);
 
-    const validSizes = SIZES.filter(sz => (existing[sz] || 0) > 0);
-    const beta = {};
-    let betaTotal = 0;
+    const validSizes = SIZES.filter(sz => (existingAgg[sz] || 0) > 0);
+    const beta = {}; let betaTotal = 0;
 
     for (const sz of validSizes){
-      const units = existing[sz] || 0;
-      const ratio = units / totalUnitsAll * 100; // 台数比率[%]
-      beta[sz] = (ALPHA[sz] || 0) * ratio;
-      betaTotal += beta[sz];
+      const units  = existingAgg[sz] || 0;
+      const ratio  = units / totalUnitsAll * 100; // 台数比率[%]
+      beta[sz]     = (ALPHA[sz] || 0) * ratio;
+      betaTotal   += beta[sz];
     }
 
-    const sizeAdj = {};
-    for (const sz of validSizes){
-      sizeAdj[sz] = beta[sz] / (betaTotal || 1) * 100;
-    }
+    const sizeAdj = {}; validSizes.forEach(sz => { sizeAdj[sz] = beta[sz] / (betaTotal || 1) * 100; });
 
-    const sizeMonthlyCost = {};
-    for (const sz of validSizes){
-      sizeMonthlyCost[sz] = acCostMonthly * (sizeAdj[sz]/100);
-    }
+    const sizeMonthlyCost = {}; validSizes.forEach(sz => { sizeMonthlyCost[sz] = acCostMonthly * (sizeAdj[sz]/100); });
 
-    const sizeSaving = {};
-    for (const sz of validSizes){
+    const sizeSaving = {}; validSizes.forEach(sz => {
       const rate = BASE_SAVING_RATE[sz] || 0;
       sizeSaving[sz] = sizeMonthlyCost[sz] * (rate/100);
-    }
+    });
 
-    const totalSaving = Object.values(sizeSaving).reduce((a,b)=>a+b,0);
+    const totalSaving    = Object.values(sizeSaving).reduce((a,b)=>a+b,0);
     const totalSavingPct = avgBill>0 ? (totalSaving / avgBill * 100) : 0;
 
-    // 年間想定削減額
     let annualSaving = 0;
     for (let m=1; m<=12; m++){ annualSaving += (avgBill * (MONTH_COEF[m] || 1)) * (totalSavingPct/100); }
     const monthlySavingAvg = annualSaving / 12;
@@ -397,15 +393,12 @@ function onSubmit(e){
   // ---- レンジ表記用の整形（前回版のまま） ----
   const annuals   = resultRows.map(r => r.annualSaving).filter(Number.isFinite);
   const monthsArr = resultRows.map(r => r.paybackMonths).filter(v => v != null);
-
   const annualMin = Math.min(...annuals);
   const annualMax = Math.max(...annuals);
   const monthsMin = Math.min(...monthsArr);
   const monthsMax = Math.max(...monthsArr);
-
   const fmtYen = (x) => (Math.ceil(+x || 0)).toLocaleString("ja-JP") + "円";
   const fmtManYen = (x) => Math.floor((+x || 0) / 10000).toLocaleString("ja-JP") + "万円";
-
   const commentFast   = `👉 最短${monthsMin}ヶ月で投資回収！`;
   const commentAnnual = `👉 年間${fmtManYen(annualMax)}以上の削減効果も期待できます！`;
   const yearsWithin   = Math.ceil(monthsMin / 12);
@@ -422,51 +415,35 @@ function onSubmit(e){
         <div><span>年間削減額</span><strong>${fmtManYen(annualMin)}～${fmtManYen(annualMax)}</strong></div>
         <div><span>回収期間</span><strong>${monthsMin}ヶ月～${monthsMax}ヶ月</strong></div>
       </div>
-
-      <!-- 一言コメント群（ボタンより上） -->
       <div style="margin-top:12px;">
         <div>${commentFast}</div>
         <div>${commentAnnual}</div>
         <div style="margin-top:8px; color:#333;">${commentYear}</div>
       </div>
-
-      <!-- 小見出し（2行・強調） -->
       <div style="margin-top:18px; text-align:center;">
         <div style="font-weight:800; font-size:18px; line-height:1.3;">専門家があなたの施設に最適な</div>
         <div style="font-weight:800; font-size:18px; line-height:1.3;">削減プランを無料ご提案！</div>
       </div>
-
-      <!-- CTA：本見積依頼ボタン -->
       <div style="margin-top:12px; text-align:center;">
-        <a
-          class="cta-estimate"
-          href="https://xs161700.xsrv.jp/terano-tech/contact/"
-          target="_blank" rel="noopener"
-          style="
-            display:inline-flex; align-items:center; justify-content:center; gap:8px;
-            padding:14px 20px; font-size:16px; font-weight:700;
-            color:#fff; text-decoration:none; border-radius:12px;
-            background:#FF7043; box-shadow: 0 6px 16px rgba(255,112,67,0.35);
-            transition: transform .05s ease, box-shadow .15s ease;
-          "
-          onmouseover="this.style.boxShadow='0 8px 20px rgba(255,112,67,0.45)';"
-          onmouseout="this.style.boxShadow='0 6px 16px rgba(255,112,67,0.35)';"
-          onmousedown="this.style.transform='translateY(1px)';"
-          onmouseup="this.style.transform='translateY(0)';"
-        >
-          <span>無料の本見積もり依頼はこちら</span>
-          <span aria-hidden="true">＞</span>
+        <a class="cta-estimate"
+           href="https://xs161700.xsrv.jp/terano-tech/contact/"
+           target="_blank" rel="noopener"
+           style="display:inline-flex;align-items:center;justify-content:center;gap:8px;
+                  padding:14px 20px;font-size:16px;font-weight:700;color:#fff;text-decoration:none;
+                  border-radius:12px;background:#FF7043;box-shadow:0 6px 16px rgba(255,112,67,0.35);
+                  transition:transform .05s ease,box-shadow .15s ease;"
+           onmouseover="this.style.boxShadow='0 8px 20px rgba(255,112,67,0.45)';"
+           onmouseout="this.style.boxShadow='0 6px 16px rgba(255,112,67,0.35)';"
+           onmousedown="this.style.transform='translateY(1px)';"
+           onmouseup="this.style.transform='translateY(0)';">
+          <span>無料の本見積もり依頼はこちら</span><span aria-hidden="true">＞</span>
         </a>
       </div>
     </div>
   `;
-
-  // 結果セクションを表示してスムーズスクロール
   const resultArea = document.getElementById("result-area");
   resultArea.style.display = "";
-  setTimeout(() => {
-    resultArea.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 0);
+  setTimeout(() => { resultArea.scrollIntoView({ behavior:"smooth", block:"start" }); }, 0);
 }
 
 // =========================
@@ -477,24 +454,31 @@ function qs(sel){ return document.querySelector(sel); }
 function cryptoRandomId(){ return 'xxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)); }
 function clampPct(x){ if (isNaN(x)) return 0; return Math.max(0, Math.min(100, x)); }
 
-/** 行式 -> サイズ合計に集計（既設） */
-function aggregateExistingRows(rows){
-  const agg = {}; SIZES.forEach(sz => agg[sz] = 0);
+/** 「UNKNOWN」をジャンル既定サイズに解決して集計（既設用） */
+function aggregateExistingRowsResolved(rows, genre){
+  const resolved = {}; SIZES.forEach(sz => resolved[sz] = 0);
+  const defaultSize = GENRE_SIZE_DEFAULT[genre] || "L";
   rows.forEach(r => {
-    const sz = r.size; const c = Math.max(0, Number(r.count) || 0);
-    if (agg[sz] == null) agg[sz] = 0;
-    agg[sz] += c;
+    let sz = r.size;
+    if (sz === UNKNOWN_VALUE) sz = defaultSize;
+    if (!resolved.hasOwnProperty(sz)) resolved[sz] = 0;
+    resolved[sz] += Math.max(0, Number(r.count) || 0);
   });
-  return agg;
+  return resolved;
 }
 
 /** 行式 -> サイズ合計に集計（施工希望） */
 function aggregateDesiredRows(rows){
   const agg = {}; SIZES.forEach(sz => agg[sz] = 0);
   rows.forEach(r => {
-    const sz = r.size; const c = Math.max(0, Number(r.count) || 0);
+    let sz = r.size;
+    if (sz === UNKNOWN_VALUE) {
+      // 念のため：施工希望側にUNKNOWNが紛れていた場合もジャンル既定に寄せる
+      const genre = gv("genre-select").trim();
+      sz = GENRE_SIZE_DEFAULT[genre] || "L";
+    }
     if (agg[sz] == null) agg[sz] = 0;
-    agg[sz] += c;
+    agg[sz] += Math.max(0, Number(r.count) || 0);
   });
   return agg;
 }

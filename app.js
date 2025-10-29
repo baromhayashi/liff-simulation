@@ -236,7 +236,7 @@ function paintDesiredRows(){
     </div>
   `).join("");
 
-  // 非表示だが互換のためイベントを付与
+  // 非表示だが互換のためイベントは付与
   desiredRows.forEach(r => {
     qs(`#des-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
     qs(`#des-count-${r.id}`).addEventListener("input",  e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });
@@ -372,7 +372,7 @@ async function onSubmit(e){
   const yearsWithin   = Math.ceil(monthsMin / 12);
   const commentYear   = `📌 最短${yearsWithin}年以内に投資回収 → その後はずっとプラス効果！`;
 
-  // ========== 結果描画（＋問い合わせドロワー） ==========
+  // ========== 結果描画＋問い合わせドロワー ==========
   const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">
@@ -409,8 +409,8 @@ async function onSubmit(e){
         <div style="font-weight:700; font-size:16px; margin-bottom:8px;">問い合わせ情報の送信</div>
         <div style="display:grid; gap:8px;">
           <input id="contact-name"  type="text"  placeholder="担当者様のお名前（必須）" style="padding:10px; border:1px solid #ddd; border-radius:10px;">
-          <input id="contact-tel"   type="tel"   placeholder="電話番号（任意）"     style="padding:10px; border:1px solid #ddd; border-radius:10px;">
-          <input id="contact-mail"  type="email" placeholder="メールアドレス（任意）" style="padding:10px; border:1px solid #ddd; border-radius:10px;">
+          <input id="contact-tel"   type="tel"   placeholder="電話番号（必須）"       style="padding:10px; border:1px solid #ddd; border-radius:10px;">
+          <input id="contact-mail"  type="email" placeholder="メールアドレス（必須）" style="padding:10px; border:1px solid #ddd; border-radius:10px;">
           <label style="font-size:13px;">
             <input type="checkbox" id="contact-consent"> 個人情報の取扱いに同意します
           </label>
@@ -440,7 +440,12 @@ async function onSubmit(e){
   sendBtn.onclick = async () => {
     const name = gvVal("contact-name"), tel = gvVal("contact-tel"), mail = gvVal("contact-mail");
     const consent = document.getElementById("contact-consent").checked;
+
+    // ▼必須チェック：氏名・電話・メール・同意
     if (!name){ alert("担当者様のお名前を入力してください。"); return; }
+    if (!tel){  alert("電話番号を入力してください。"); return; }
+    if (!mail){ alert("メールアドレスを入力してください。"); return; }
+    if (!/^\S+@\S+\.\S+$/.test(mail)){ alert("メールアドレスの形式が正しくありません。"); return; }
     if (!consent){ alert("個人情報の取扱いに同意してください。"); return; }
 
     // 送信用 payload
@@ -495,7 +500,7 @@ async function onSubmit(e){
             `導入費用：${fmtYen(introduceCost)}`,
             `年間削減額：${fmtManYen(annualMin)}～${fmtManYen(annualMax)}`,
             `回収期間：${monthsMin}～${monthsMax}ヶ月`,
-            `担当者：${name}${tel?`／TEL:${tel}`:""}${mail?`／MAIL:${mail}`:""}`
+            `担当者：${name}／TEL:${tel}／MAIL:${mail}`
           ].join("\n");
           await liff.sendMessages([{ type:"text", text: msg }]);
         }

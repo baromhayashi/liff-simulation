@@ -2,8 +2,9 @@
 // 設定
 // =========================
 const LIFF_ID = "YOUR_LIFF_ID_HERE"; // 必要時に設定
+const SERVER_ENDPOINT = ""; // 例: "https://example.com/api/estimate-request"（未設定なら sendMessages フォールバック）
 
-// サイズ一覧（※UIの標準選択肢。内部用に "UNKNOWN" を追加で扱う）
+// サイズ一覧（UIの標準選択肢。内部用に "UNKNOWN" を追加で扱う）
 const SIZES = ["S","M","L","LL","3L","4L","5L","6L","7L","8L"];
 const UNKNOWN_VALUE = "UNKNOWN"; // 「わからない」の内部値
 
@@ -51,7 +52,7 @@ const GENRE_DEFAULTS = {
   "倉庫物流施設": 10
 };
 
-// ▼ジャンル別の既定サイズ（ご指定の表に従う）
+// ▼ジャンル別の既定サイズ
 const GENRE_SIZE_DEFAULT = {
   "コンビニエンスストア": "3L",
   "パチンコ店": "7L",
@@ -79,15 +80,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderMonthlyInputs();
   setupBillTypeToggle();
 
-  // ▼ジャンル選択：空調比率は自動入力しない／既設サイズのみ自動反映
-  const genreSel = document.getElementById("genre-select");
+  // ▼空調比率：自動入力しない（placeholderのみ変更）
   const acInput  = document.getElementById("ac-ratio");
   if (acInput) acInput.placeholder = "例：25（不明時は空欄で可）";
 
+  // ▼ジャンル選択：既設サイズのみ自動反映（1台）／空調比率は自動入力しない
+  const genreSel = document.getElementById("genre-select");
   genreSel.addEventListener("change", () => {
     const g = genreSel.value;
-    // 空調比率の自動入力はしない（内部は送信時に参照）
-    // 室外機サイズ別台数の自動反映（既定サイズ1台）
     if (GENRE_SIZE_DEFAULT[g]) {
       const sz = GENRE_SIZE_DEFAULT[g];
       existingRows = [{ id: cryptoRandomId(), size: sz, count: 1 }];
@@ -160,13 +160,12 @@ function renderExistingList(){
   const host = document.getElementById("existing-list");
   host.innerHTML = `<div id="existing-rows"></div>`;
   existingRows = [];
-  addExistingRow();           // 初期行
+  addExistingRow();           // 初期行（UNKNOWN 1台）
   syncDesiredFromExisting();  // 初期同期
 }
 function addExistingRow(){
   const id = cryptoRandomId();
-  // 追加行は「わからない」初期値にすると入力がやさしい
-  existingRows.push({ id, size: UNKNOWN_VALUE, count: 1 });
+  existingRows.push({ id, size: UNKNOWN_VALUE, count: 1 }); // デフォルト「わからない」
   paintExistingRows();
 }
 function removeExistingRow(id){
@@ -175,7 +174,6 @@ function removeExistingRow(id){
   syncDesiredFromExisting();
 }
 function sizeOptionsHtml(current){
-  // 先頭に「わからない」
   const unknownOpt = `<option value="${UNKNOWN_VALUE}" ${current===UNKNOWN_VALUE?'selected':''}>わからない</option>`;
   const sizeOpts   = SIZES.map(sz => `<option value="${sz}" ${sz===current?'selected':''}>${sz}</option>`).join("");
   return unknownOpt + sizeOpts;
@@ -201,7 +199,6 @@ function paintExistingRows(){
     </div>
   `).join("");
 
-  // 変更のたびに施工希望へ同期
   existingRows.forEach(r => {
     qs(`#ex-size-${r.id}`).addEventListener("change", e => { r.size = e.target.value; syncDesiredFromExisting(); });
     qs(`#ex-count-${r.id}`).addEventListener("input", e => {
@@ -220,7 +217,7 @@ function renderDesiredList(){
 }
 function paintDesiredRows(){
   const wrap = document.getElementById("desired-rows");
-  if (!wrap) return; // 安全策
+  if (!wrap) return;
   wrap.innerHTML = (desiredRows.length ? desiredRows : []).map(r => `
     <div class="row desired-row" id="drow-${r.id}">
       <div class="cell">
@@ -239,7 +236,7 @@ function paintDesiredRows(){
     </div>
   `).join("");
 
-  // 非表示だが互換のためイベントは付与
+  // 非表示だが互換のためイベントを付与
   desiredRows.forEach(r => {
     qs(`#des-size-${r.id}`).addEventListener("change", e => r.size = e.target.value);
     qs(`#des-count-${r.id}`).addEventListener("input",  e => { const v = Math.max(0, +e.target.value || 0); r.count = v; e.target.value = v; });
@@ -247,24 +244,18 @@ function paintDesiredRows(){
   });
 }
 
-// ===== 既設 → 施工希望 自動同期（わからない→ジャンル既定サイズに読み替え） =====
+// ===== 既設 → 施工希望 自動同期（UNKNOWN→ジャンル既定サイズ解決） =====
 function syncDesiredFromExisting(){
   const genre = gv("genre-select").trim();
-  const defaultSize = GENRE_SIZE_DEFAULT[genre] || null;
+  const defaultSize = GENRE_SIZE_DEFAULT[genre] || "L";
 
-  // 既設をサイズごとに集計（UNKNOWN はジャンル既定サイズに読み替え）
   const agg = {}; SIZES.forEach(sz => agg[sz] = 0);
   existingRows.forEach(r => {
-    let sz = r.size;
-    if (sz === UNKNOWN_VALUE) {
-      // ジャンル未選択や既定なしの場合は安全のため L 扱い（※送信時にはジャンル必須で弾くため通常は通らない）
-      sz = defaultSize || "L";
-    }
+    let sz = r.size === UNKNOWN_VALUE ? defaultSize : r.size;
     if (!agg.hasOwnProperty(sz)) agg[sz] = 0;
     agg[sz] += Math.max(0, Number(r.count) || 0);
   });
 
-  // 集計結果から施工希望の行を再構成（サイズ順、台数>0のみ）
   const rows = [];
   SIZES.forEach(sz => { if ((agg[sz]||0) > 0) rows.push({ id: cryptoRandomId(), size: sz, count: agg[sz] }); });
   desiredRows = rows;
@@ -274,78 +265,55 @@ function syncDesiredFromExisting(){
 // =========================
 // 送信（計算ロジック）
 // =========================
-function onSubmit(e){
+async function onSubmit(e){
   e.preventDefault();
 
   const client  = gv("client-name").trim();
   const project = gv("project-name").trim();
   const genre   = gv("genre-select").trim();
 
-  // 必須チェック
-  if (!client || !project){
-    alert("法人・個人名／施設名を入力してください。");
-    return;
-  }
-  if (!genre){
-    alert("ジャンルを選択してください。");
-    return;
-  }
+  if (!client || !project){ alert("法人・個人名／施設名を入力してください。"); return; }
+  if (!genre){ alert("ジャンルを選択してください。"); return; }
 
   // --- 電気代 ---
   const monthlyMode = qs("#radio-monthly").checked;
   let monthlyBills = [];
-  if (monthlyMode){
-    for (let m=1; m<=12; m++){ monthlyBills.push(+gv(`bill-${m}`) || 0); }
-  } else {
-    const avg = +gv("annual-bill") || 0;
-    monthlyBills = Array(12).fill(avg);
-  }
+  if (monthlyMode){ for (let m=1; m<=12; m++){ monthlyBills.push(+gv(`bill-${m}`) || 0); } }
+  else { const avg = +gv("annual-bill") || 0; monthlyBills = Array(12).fill(avg); }
 
-  // 実入力がある月だけで平均 → 欠損は季節係数で補完
   const provided = monthlyBills.filter(v => v>0);
   const monthlyAvg = provided.length>0 ? (provided.reduce((a,b)=>a+b,0) / provided.length) : 0;
   const completedBills = monthlyBills.map((v, idx) => v>0 ? v : monthlyAvg * (MONTH_COEF[idx+1] || 1));
   const avgBill = completedBills.reduce((a,b)=>a+b,0) / 12;
 
-  // --- 空調比率（入力があれば優先。空欄ならジャンル既定値を内部適用） ---
+  // --- 空調比率（入力優先／空欄はジャンル既定）
   const acInputRaw = gv("ac-ratio").trim();
   let acBase;
-  if (acInputRaw !== "") {
-    acBase = clampPct(+acInputRaw);
-  } else if (GENRE_DEFAULTS.hasOwnProperty(genre) && GENRE_DEFAULTS[genre] != null) {
-    acBase = clampPct(GENRE_DEFAULTS[genre]);
-  } else {
-    alert("空調比率が未入力です。ジャンルを選択するか、空調比率を入力してください。");
-    return;
-  }
+  if (acInputRaw !== "") acBase = clampPct(+acInputRaw);
+  else if (GENRE_DEFAULTS.hasOwnProperty(genre) && GENRE_DEFAULTS[genre] != null) acBase = clampPct(GENRE_DEFAULTS[genre]);
+  else { alert("空調比率が未入力です。ジャンルを選択するか、空調比率を入力してください。"); return; }
   const acVariants = [ clampPct(acBase-5), acBase, clampPct(acBase+5) ];
 
-  // --- 既設（行）→ サイズ合計 集計（UNKNOWN は既定サイズに読み替え済みの desiredRows を使用） ---
-  // desiredRows は syncDesiredFromExisting() で UNKNOWN を解決済み
+  // --- 既設（UNKNOWN解決） ---
   const existingAgg = aggregateExistingRowsResolved(existingRows, genre);
   const totalUnitsAll = Object.values(existingAgg).reduce((a,b)=>a+(b||0),0);
-  if (totalUnitsAll === 0){
-    alert("室外機サイズ別台数を1件以上入力してください。");
-    return;
-  }
+  if (totalUnitsAll === 0){ alert("室外機サイズ別台数を1件以上入力してください。"); return; }
 
-  // --- 施工希望（行）→ サイズ合計（内部保持）
+  // --- 施工希望（内部保持）
   const desired = aggregateDesiredRows(desiredRows);
 
-  // ========== 削減額計算（方角補正なし） ==========
+  // ========== 削減額計算 ==========
   const scenarios = acVariants.map(acPct => {
     const acCostMonthly = avgBill * (acPct/100);
-
     const validSizes = SIZES.filter(sz => (existingAgg[sz] || 0) > 0);
+
     const beta = {}; let betaTotal = 0;
-
     for (const sz of validSizes){
-      const units  = existingAgg[sz] || 0;
-      const ratio  = units / totalUnitsAll * 100; // 台数比率[%]
-      beta[sz]     = (ALPHA[sz] || 0) * ratio;
-      betaTotal   += beta[sz];
+      const units = existingAgg[sz] || 0;
+      const ratio = units / totalUnitsAll * 100;
+      beta[sz] = (ALPHA[sz] || 0) * ratio;
+      betaTotal += beta[sz];
     }
-
     const sizeAdj = {}; validSizes.forEach(sz => { sizeAdj[sz] = beta[sz] / (betaTotal || 1) * 100; });
 
     const sizeMonthlyCost = {}; validSizes.forEach(sz => { sizeMonthlyCost[sz] = acCostMonthly * (sizeAdj[sz]/100); });
@@ -372,7 +340,7 @@ function onSubmit(e){
   const workDays = personDaysNeeded>0 ? Math.ceil(personDaysNeeded / crew) : 0;
   const cleanFee = workDays <= 1 ? 80000 : 100000;
   const miscFee = 60000 + 10000 * workDays;
-  const transport = 0; // サーバ側で上書き予定
+  const transport = 0;
   const nights = Math.max(workDays - 1, 0);
   const lodging = nights * crew * 10000;
   const packageSum = SIZES.reduce((acc, sz) => acc + (PRICE[sz] * (desired[sz]||0)), 0);
@@ -390,7 +358,7 @@ function onSubmit(e){
     };
   });
 
-  // ---- レンジ表記用の整形（前回版のまま） ----
+  // ---- レンジ表示用値 ----
   const annuals   = resultRows.map(r => r.annualSaving).filter(Number.isFinite);
   const monthsArr = resultRows.map(r => r.paybackMonths).filter(v => v != null);
   const annualMin = Math.min(...annuals);
@@ -403,9 +371,8 @@ function onSubmit(e){
   const commentAnnual = `👉 年間${fmtManYen(annualMax)}以上の削減効果も期待できます！`;
   const yearsWithin   = Math.ceil(monthsMin / 12);
   const commentYear   = `📌 最短${yearsWithin}年以内に投資回収 → その後はずっとプラス効果！`;
-  // --------------------------------------------
 
-  // ========== 結果描画（レンジ表記＋一言コメント＋CTA） ==========
+  // ========== 結果描画（＋問い合わせドロワー） ==========
   const res = qs("#result-content");
   res.innerHTML = `
     <div class="result-block">
@@ -415,52 +382,148 @@ function onSubmit(e){
         <div><span>年間削減額</span><strong>${fmtManYen(annualMin)}～${fmtManYen(annualMax)}</strong></div>
         <div><span>回収期間</span><strong>${monthsMin}ヶ月～${monthsMax}ヶ月</strong></div>
       </div>
+
       <div style="margin-top:12px;">
         <div>${commentFast}</div>
         <div>${commentAnnual}</div>
         <div style="margin-top:8px; color:#333;">${commentYear}</div>
       </div>
+
       <div style="margin-top:18px; text-align:center;">
         <div style="font-weight:800; font-size:18px; line-height:1.3;">専門家があなたの施設に最適な</div>
         <div style="font-weight:800; font-size:18px; line-height:1.3;">削減プランを無料ご提案！</div>
       </div>
+
       <div style="margin-top:12px; text-align:center;">
-        <a class="cta-estimate"
-           href="https://xs161700.xsrv.jp/terano-tech/contact/"
-           target="_blank" rel="noopener"
-           style="display:inline-flex;align-items:center;justify-content:center;gap:8px;
-                  padding:14px 20px;font-size:16px;font-weight:700;color:#fff;text-decoration:none;
-                  border-radius:12px;background:#FF7043;box-shadow:0 6px 16px rgba(255,112,67,0.35);
-                  transition:transform .05s ease,box-shadow .15s ease;"
-           onmouseover="this.style.boxShadow='0 8px 20px rgba(255,112,67,0.45)';"
-           onmouseout="this.style.boxShadow='0 6px 16px rgba(255,112,67,0.35)';"
-           onmousedown="this.style.transform='translateY(1px)';"
-           onmouseup="this.style.transform='translateY(0)';">
+        <button id="open-inquiry" type="button"
+          style="display:inline-flex;align-items:center;justify-content:center;gap:8px;
+                 padding:14px 20px;font-size:16px;font-weight:700;color:#fff;border:0;cursor:pointer;
+                 border-radius:12px;background:#FF7043;box-shadow:0 6px 16px rgba(255,112,67,0.35);
+                 transition:transform .05s ease, box-shadow .15s ease;">
           <span>無料の本見積もり依頼はこちら</span><span aria-hidden="true">＞</span>
-        </a>
+        </button>
+      </div>
+
+      <!-- 問い合わせドロワー -->
+      <div id="inquiry-drawer" style="display:none; position:fixed; left:0; right:0; bottom:0; background:#fff; box-shadow:0 -8px 24px rgba(0,0,0,.12); padding:16px; z-index:9999; border-top-left-radius:16px; border-top-right-radius:16px;">
+        <div style="font-weight:700; font-size:16px; margin-bottom:8px;">問い合わせ情報の送信</div>
+        <div style="display:grid; gap:8px;">
+          <input id="contact-name"  type="text"  placeholder="担当者様のお名前（必須）" style="padding:10px; border:1px solid #ddd; border-radius:10px;">
+          <input id="contact-tel"   type="tel"   placeholder="電話番号（任意）"     style="padding:10px; border:1px solid #ddd; border-radius:10px;">
+          <input id="contact-mail"  type="email" placeholder="メールアドレス（任意）" style="padding:10px; border:1px solid #ddd; border-radius:10px;">
+          <label style="font-size:13px;">
+            <input type="checkbox" id="contact-consent"> 個人情報の取扱いに同意します
+          </label>
+          <div style="display:flex; gap:8px; margin-top:4px;">
+            <button id="send-inquiry" class="form-btn" type="button" style="flex:1;">この内容でLINEから問い合わせ</button>
+            <button id="close-inquiry" type="button" style="flex:0 0 auto; padding:10px 12px; border:1px solid #ddd; border-radius:10px; background:#fafafa;">閉じる</button>
+          </div>
+        </div>
       </div>
     </div>
   `;
+
+  // 表示とスクロール
   const resultArea = document.getElementById("result-area");
   resultArea.style.display = "";
   setTimeout(() => { resultArea.scrollIntoView({ behavior:"smooth", block:"start" }); }, 0);
+
+  // ドロワー操作
+  const drawer   = document.getElementById("inquiry-drawer");
+  const openBtn  = document.getElementById("open-inquiry");
+  const closeBtn = document.getElementById("close-inquiry");
+  const sendBtn  = document.getElementById("send-inquiry");
+  openBtn.onclick  = () => drawer.style.display = "";
+  closeBtn.onclick = () => drawer.style.display = "none";
+
+  // 送信
+  sendBtn.onclick = async () => {
+    const name = gvVal("contact-name"), tel = gvVal("contact-tel"), mail = gvVal("contact-mail");
+    const consent = document.getElementById("contact-consent").checked;
+    if (!name){ alert("担当者様のお名前を入力してください。"); return; }
+    if (!consent){ alert("個人情報の取扱いに同意してください。"); return; }
+
+    // 送信用 payload
+    const payload = {
+      client: { name: client, facility: project, genre },
+      acRatioUsed: acBase,
+      bills: {
+        monthlyInput: monthlyBills,
+        monthlyCompleted: completedBills,
+        avgMonthly: Math.ceil(avgBill),
+        annualTotal: Math.ceil(completedBills.reduce((a,b)=>a+b,0))
+      },
+      units: {
+        existingResolved: existingAgg, // UNKNOWN解決後
+        desired // 内部同期済み
+      },
+      costs: {
+        introduceCost: Math.ceil(introduceCost),
+        annualSavingMin: Math.ceil(annualMin),
+        annualSavingMax: Math.ceil(annualMax),
+        paybackMonthsMin: monthsMin,
+        paybackMonthsMax: monthsMax
+      },
+      contact: { name, tel, mail },
+      meta: { timestamp: Date.now() }
+    };
+
+    // LIFFプロフィール（任意）
+    try {
+      if (window.liff && liff.isLoggedIn && liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        payload.line = { userId: profile.userId, displayName: profile.displayName };
+      }
+    } catch {}
+
+    // サーバPOST or フォールバック（sendMessages）
+    try {
+      if (SERVER_ENDPOINT) {
+        const res = await fetch(SERVER_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(String(res.status));
+      } else {
+        // フォールバック：ユーザー本人に受付控え（要LIFFログイン）
+        if (window.liff && liff.isLoggedIn && liff.isLoggedIn() && liff.sendMessages) {
+          const msg = [
+            `本見積のご依頼を受け付けました。`,
+            `施設名：${project}`,
+            `ジャンル：${genre}`,
+            `導入費用：${fmtYen(introduceCost)}`,
+            `年間削減額：${fmtManYen(annualMin)}～${fmtManYen(annualMax)}`,
+            `回収期間：${monthsMin}～${monthsMax}ヶ月`,
+            `担当者：${name}${tel?`／TEL:${tel}`:""}${mail?`／MAIL:${mail}`:""}`
+          ].join("\n");
+          await liff.sendMessages([{ type:"text", text: msg }]);
+        }
+      }
+      alert("送信が完了しました。担当よりご連絡いたします。");
+      drawer.style.display = "none";
+    } catch (err) {
+      console.error(err);
+      alert("送信に失敗しました。通信状況をご確認のうえ、時間をおいてお試しください。");
+    }
+  };
 }
 
 // =========================
 // ヘルパ
 // =========================
 function gv(id){ return document.getElementById(id).value; }
+function gvVal(id){ const el = document.getElementById(id); return el ? el.value.trim() : ""; }
 function qs(sel){ return document.querySelector(sel); }
 function cryptoRandomId(){ return 'xxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)); }
 function clampPct(x){ if (isNaN(x)) return 0; return Math.max(0, Math.min(100, x)); }
 
-/** 「UNKNOWN」をジャンル既定サイズに解決して集計（既設用） */
+/** 既設（UNKNOWN→ジャンル既定サイズに解決して集計） */
 function aggregateExistingRowsResolved(rows, genre){
   const resolved = {}; SIZES.forEach(sz => resolved[sz] = 0);
   const defaultSize = GENRE_SIZE_DEFAULT[genre] || "L";
   rows.forEach(r => {
-    let sz = r.size;
-    if (sz === UNKNOWN_VALUE) sz = defaultSize;
+    let sz = r.size === UNKNOWN_VALUE ? defaultSize : r.size;
     if (!resolved.hasOwnProperty(sz)) resolved[sz] = 0;
     resolved[sz] += Math.max(0, Number(r.count) || 0);
   });
@@ -473,7 +536,6 @@ function aggregateDesiredRows(rows){
   rows.forEach(r => {
     let sz = r.size;
     if (sz === UNKNOWN_VALUE) {
-      // 念のため：施工希望側にUNKNOWNが紛れていた場合もジャンル既定に寄せる
       const genre = gv("genre-select").trim();
       sz = GENRE_SIZE_DEFAULT[genre] || "L";
     }

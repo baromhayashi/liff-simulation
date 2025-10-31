@@ -358,19 +358,23 @@ async function onSubmit(e){
     };
   });
 
-  // ---- レンジ表示用値 ----
+  // ---- レンジ表示用値（min/max 月）とコメント生成 ----
   const annuals   = resultRows.map(r => r.annualSaving).filter(Number.isFinite);
   const monthsArr = resultRows.map(r => r.paybackMonths).filter(v => v != null);
   const annualMin = Math.min(...annuals);
   const annualMax = Math.max(...annuals);
   const monthsMin = Math.min(...monthsArr);
   const monthsMax = Math.max(...monthsArr);
+
   const fmtYen = (x) => (Math.ceil(+x || 0)).toLocaleString("ja-JP") + "円";
   const fmtManYen = (x) => Math.floor((+x || 0) / 10000).toLocaleString("ja-JP") + "万円";
+
+  // 既存の2つのコメントは維持
   const commentFast   = `👉 最短${monthsMin}ヶ月で投資回収！`;
   const commentAnnual = `👉 年間${fmtManYen(annualMax)}以上の削減効果も期待できます！`;
-  const yearsWithin   = Math.ceil(monthsMin / 12);
-  const commentYear   = `📌 最短${yearsWithin}年以内に投資回収 → その後はずっとプラス効果！`;
+  // ★修正点：上限月（monthsMax）を年に丸めた「最大◯年以内」表記
+  const maxYearsWithin = Math.ceil(monthsMax / 12);
+  const commentMaxYear = `📌 最大${maxYearsWithin}年以内で回収可能かもしれません。`;
 
   // ========== 結果描画＋問い合わせドロワー ==========
   const res = qs("#result-content");
@@ -386,7 +390,7 @@ async function onSubmit(e){
       <div style="margin-top:12px;">
         <div>${commentFast}</div>
         <div>${commentAnnual}</div>
-        <div style="margin-top:8px; color:#333;">${commentYear}</div>
+        <div style="margin-top:8px; color:#333;">${commentMaxYear}</div>
       </div>
 
       <div style="margin-top:18px; text-align:center;">
@@ -441,7 +445,7 @@ async function onSubmit(e){
     const name = gvVal("contact-name"), tel = gvVal("contact-tel"), mail = gvVal("contact-mail");
     const consent = document.getElementById("contact-consent").checked;
 
-    // ▼必須チェック：氏名・電話・メール・同意
+    // 必須チェック：氏名・電話・メール・同意
     if (!name){ alert("担当者様のお名前を入力してください。"); return; }
     if (!tel){  alert("電話番号を入力してください。"); return; }
     if (!mail){ alert("メールアドレスを入力してください。"); return; }

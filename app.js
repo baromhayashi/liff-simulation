@@ -35,38 +35,55 @@ const AREA = {
   S:0.8, M:1.3, L:1.7, LL:2.7, "3L":4.2, "4L":4.6, "5L":6.6, "6L":7.7, "7L":8.9, "8L":10.3
 };
 
-// ▼ジャンル別の既定空調比率（%）
+// ▼ジャンル別の既定空調比率（ご指定の値）
 const GENRE_DEFAULTS = {
-  "コンビニエンスストア": 20,
-  "パチンコ店": 50,
-  "小売店舗（アパレル・雑貨等）": 30,
-  "オフィスビル": 45,
-  "ホテル・宿泊施設": 45,
-  "病院クリニック": 35,
-  "学校・教育施設": 25,
-  "アミューズメント施設（映画館・ゲームセンター）": 40,
-  "フィットネスジム": 35,
-  "スーパー・食品小売り": 20,
-  "工場（軽工業系）": 15,
+  "コンビニエンスストア": 25,
+  "パチンコ店": 60,
+  "小売店舗（アパレル・雑貨等）": 35,
+  "オフィスビル": 50,
+  "ホテル・宿泊施設": 50,
+  "病院クリニック": 40,
+  "学校・教育施設": 30,
+  "アミューズメント施設（映画館・ゲームセンター）": 45,
+  "フィットネスジム": 40,
+  "スーパー・食品小売り": 25,
+  "工場（軽工業系）": 20,
   "工場（重工業系）": 10,
-  "倉庫物流施設": 10
+  "倉庫物流施設": 15
 };
 
 // ▼ジャンル別の既定サイズ
 const GENRE_SIZE_DEFAULT = {
   "コンビニエンスストア": "3L",
-  "パチンコ店": "7L",
+  "パチンコ店": "8L",
   "小売店舗（アパレル・雑貨等）": "L",
-  "オフィスビル": "3L",
-  "ホテル・宿泊施設": "3L",
+  "オフィスビル": "4L",
+  "ホテル・宿泊施設": "4L",
   "病院クリニック": "LL",
-  "学校・教育施設": "LL",
-  "アミューズメント施設（映画館・ゲームセンター）": "5L",
-  "フィットネスジム": "4L",
-  "スーパー・食品小売り": "5L",
-  "工場（軽工業系）": "6L",
-  "工場（重工業系）": "7L",
-  "倉庫物流施設": "7L"
+  "学校・教育施設": "3L",
+  "アミューズメント施設（映画館・ゲームセンター）": "6L",
+  "フィットネスジム": "5L",
+  "スーパー・食品小売り": "7L",
+  "工場（軽工業系）": "7L",
+  "工場（重工業系）": "8L",
+  "倉庫物流施設": "8L"
+};
+
+// ▼ジャンル別の既定室外機台数（最大台数）
+const GENRE_MAX_UNITS = {
+  "コンビニエンスストア": 8,
+  "パチンコ店": 22,
+  "小売店舗（アパレル・雑貨等）": 10,
+  "オフィスビル": 10,
+  "ホテル・宿泊施設": 6,
+  "病院クリニック": 10,
+  "学校・教育施設": 20,
+  "アミューズメント施設（映画館・ゲームセンター）": 5,
+  "フィットネスジム": 12,
+  "スーパー・食品小売り": 16,
+  "工場（軽工業系）": 29,
+  "工場（重工業系）": 20,
+  "倉庫物流施設": 30
 };
 
 // 既設・施工希望（行追加式）
@@ -80,17 +97,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderMonthlyInputs();
   setupBillTypeToggle();
 
-  // ▼空調比率：自動入力しない（placeholderのみ変更）
+  // 空調比率：自動入力しない（placeholderのみ変更）
   const acInput  = document.getElementById("ac-ratio");
   if (acInput) acInput.placeholder = "例：25（不明時は空欄で可）";
 
-  // ▼ジャンル選択：既設サイズのみ自動反映（1台）／空調比率は自動入力しない
+  // ▼ジャンル選択：既設サイズ・最大台数を自動反映／空調比率は自動入力しない
   const genreSel = document.getElementById("genre-select");
   genreSel.addEventListener("change", () => {
     const g = genreSel.value;
     if (GENRE_SIZE_DEFAULT[g]) {
       const sz = GENRE_SIZE_DEFAULT[g];
-      existingRows = [{ id: cryptoRandomId(), size: sz, count: 1 }];
+      const units = GENRE_MAX_UNITS[g] || 1;
+      existingRows = [{ id: cryptoRandomId(), size: sz, count: units }];
       paintExistingRows();
       syncDesiredFromExisting();
     }
@@ -263,7 +281,7 @@ function syncDesiredFromExisting(){
 }
 
 // =========================
-// 送信（計算ロジック）
+// 送信（計算ロジック＋問い合わせドロワー）
 // =========================
 async function onSubmit(e){
   e.preventDefault();
@@ -286,7 +304,7 @@ async function onSubmit(e){
   const completedBills = monthlyBills.map((v, idx) => v>0 ? v : monthlyAvg * (MONTH_COEF[idx+1] || 1));
   const avgBill = completedBills.reduce((a,b)=>a+b,0) / 12;
 
-  // --- 空調比率（入力優先／空欄はジャンル既定）
+  // --- 空調比率（入力優先／空欄はジャンル既定） ---
   const acInputRaw = gv("ac-ratio").trim();
   let acBase;
   if (acInputRaw !== "") acBase = clampPct(+acInputRaw);
@@ -299,7 +317,6 @@ async function onSubmit(e){
   const totalUnitsAll = Object.values(existingAgg).reduce((a,b)=>a+(b||0),0);
   if (totalUnitsAll === 0){ alert("室外機サイズ別台数を1件以上入力してください。"); return; }
 
-  // --- 施工希望（内部保持）
   const desired = aggregateDesiredRows(desiredRows);
 
   // ========== 削減額計算 ==========
@@ -358,7 +375,7 @@ async function onSubmit(e){
     };
   });
 
-  // ---- レンジ表示用値（min/max 月）とコメント生成 ----
+  // ---- レンジ表示用値＆コメント ----
   const annuals   = resultRows.map(r => r.annualSaving).filter(Number.isFinite);
   const monthsArr = resultRows.map(r => r.paybackMonths).filter(v => v != null);
   const annualMin = Math.min(...annuals);
@@ -366,13 +383,11 @@ async function onSubmit(e){
   const monthsMin = Math.min(...monthsArr);
   const monthsMax = Math.max(...monthsArr);
 
-  const fmtYen = (x) => (Math.ceil(+x || 0)).toLocaleString("ja-JP") + "円";
-  const fmtManYen = (x) => Math.floor((+x || 0) / 10000).toLocaleString("ja-JP") + "万円";
+  const fmtYen = x => (Math.ceil(+x || 0)).toLocaleString("ja-JP") + "円";
+  const fmtManYen = x => Math.floor((+x || 0) / 10000).toLocaleString("ja-JP") + "万円";
 
-  // 既存の2つのコメントは維持
   const commentFast   = `👉 最短${monthsMin}ヶ月で投資回収！`;
   const commentAnnual = `👉 年間${fmtManYen(annualMax)}以上の削減効果も期待できます！`;
-  // ★修正点：上限月（monthsMax）を年に丸めた「最大◯年以内」表記
   const maxYearsWithin = Math.ceil(monthsMax / 12);
   const commentMaxYear = `📌 最大${maxYearsWithin}年以内で回収可能かもしれません。`;
 
@@ -427,7 +442,6 @@ async function onSubmit(e){
     </div>
   `;
 
-  // 表示とスクロール
   const resultArea = document.getElementById("result-area");
   resultArea.style.display = "";
   setTimeout(() => { resultArea.scrollIntoView({ behavior:"smooth", block:"start" }); }, 0);
@@ -445,14 +459,12 @@ async function onSubmit(e){
     const name = gvVal("contact-name"), tel = gvVal("contact-tel"), mail = gvVal("contact-mail");
     const consent = document.getElementById("contact-consent").checked;
 
-    // 必須チェック：氏名・電話・メール・同意
     if (!name){ alert("担当者様のお名前を入力してください。"); return; }
     if (!tel){  alert("電話番号を入力してください。"); return; }
     if (!mail){ alert("メールアドレスを入力してください。"); return; }
     if (!/^\S+@\S+\.\S+$/.test(mail)){ alert("メールアドレスの形式が正しくありません。"); return; }
     if (!consent){ alert("個人情報の取扱いに同意してください。"); return; }
 
-    // 送信用 payload
     const payload = {
       client: { name: client, facility: project, genre },
       acRatioUsed: acBase,
@@ -463,8 +475,8 @@ async function onSubmit(e){
         annualTotal: Math.ceil(completedBills.reduce((a,b)=>a+b,0))
       },
       units: {
-        existingResolved: existingAgg, // UNKNOWN解決後
-        desired // 内部同期済み
+        existingResolved: existingAgg,
+        desired
       },
       costs: {
         introduceCost: Math.ceil(introduceCost),
@@ -477,7 +489,6 @@ async function onSubmit(e){
       meta: { timestamp: Date.now() }
     };
 
-    // LIFFプロフィール（任意）
     try {
       if (window.liff && liff.isLoggedIn && liff.isLoggedIn()) {
         const profile = await liff.getProfile();
@@ -485,7 +496,6 @@ async function onSubmit(e){
       }
     } catch {}
 
-    // サーバPOST or フォールバック（sendMessages）
     try {
       if (SERVER_ENDPOINT) {
         const res = await fetch(SERVER_ENDPOINT, {
@@ -495,7 +505,6 @@ async function onSubmit(e){
         });
         if (!res.ok) throw new Error(String(res.status));
       } else {
-        // フォールバック：ユーザー本人に受付控え（要LIFFログイン）
         if (window.liff && liff.isLoggedIn && liff.isLoggedIn() && liff.sendMessages) {
           const msg = [
             `本見積のご依頼を受け付けました。`,

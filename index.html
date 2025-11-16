@@ -20,17 +20,14 @@
           <div class="form-section">
             <h2 class="section-title">基本情報</h2>
             <div class="grid-2">
-              <div class="form-group">
-                <label for="client-name">法人、または個人名（必須）</label>
-                <input type="text" id="client-name" placeholder="法人名または個人名を入力" required />
-              </div>
+              <!-- 法人／個人名の項目は削除済み -->
               <div class="form-group">
                 <label for="project-name">施設名（必須）</label>
                 <input type="text" id="project-name" placeholder="例：〇〇池袋店" required />
               </div>
             </div>
 
-            <!-- ジャンル（ご指定の並び・名称に更新） -->
+            <!-- ジャンル -->
             <div class="form-group">
               <label for="genre-select">ジャンル（必須）</label>
               <select id="genre-select" required>
@@ -61,7 +58,6 @@
               <label><input type="radio" name="bill-type" value="monthly" id="radio-monthly" /> 毎月入力</label>
             </div>
 
-            <!-- 並び順：左＝年間平均、右＝毎月 -->
             <div class="bill-dual-grid">
               <!-- 年間平均（左） -->
               <div id="annual-bill-container" class="bill-input-container">
@@ -79,12 +75,11 @@
 
             <div class="form-group">
               <label for="ac-ratio">空調比率【%】（小数1桁まで）</label>
-              <!-- ジャンル選択時に自動反映。手入力があれば上書き可 -->
-              <input type="number" id="ac-ratio" placeholder="例：25（ジャンル選択で自動反映）" min="0" max="100" step="0.1" />
+              <input type="number" id="ac-ratio" placeholder="例：25（不明時は空欄で可）" min="0" max="100" step="0.1" />
             </div>
           </div>
 
-          <!-- 既設 室外機（行追加式：サイズ/台数） -->
+          <!-- 室外機サイズ別台数 -->
           <div class="form-section">
             <h2 class="section-title">室外機サイズ別台数</h2>
             <p class="section-help">サイズと台数の組み合わせを必要数追加してください。</p>
@@ -94,7 +89,7 @@
             </div>
           </div>
 
-          <!-- 施工希望台数（行追加式：サイズ/台数） -->
+          <!-- 施工希望台数（非表示だがDOMとして存在） -->
           <div class="form-section">
             <h2 class="section-title">施工希望台数</h2>
             <p class="section-help">導入費用の試算に用います。</p>
@@ -108,7 +103,7 @@
         </form>
       </div>
 
-      <!-- 結果 -->
+      <!-- 結果表示 -->
       <section id="result-area" class="result-section" style="display:none;">
         <h2>結果</h2>
         <div id="result-content"></div>
@@ -116,7 +111,7 @@
     </main>
   </div>
 
-  <!-- LIFF SDK（LINE上利用時） -->
+  <!-- LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/sdk/2.1.0/liff.js"></script>
   <script src="app.js"></script>
 </body>

@@ -87,7 +87,7 @@ const GENRE_MAX_UNITS = {
 };
 
 // 既設・施工希望（行追加式）
-let existingRows = []; // {id, size, count} // size は SIZES 値 or "UNKNOWN"
+let existingRows = []; // {id, size, count}
 let desiredRows  = []; // {id, size, count}
 
 // =========================
@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const acInput  = document.getElementById("ac-ratio");
   if (acInput) acInput.placeholder = "例：25（不明時は空欄で可）";
 
-  // ▼ジャンル選択：既設サイズ・最大台数を自動反映／空調比率は自動入力しない
+  // ジャンル選択：既設サイズ・最大台数を自動反映／空調比率は自動入力しない
   const genreSel = document.getElementById("genre-select");
   genreSel.addEventListener("change", () => {
     const g = genreSel.value;
@@ -286,11 +286,11 @@ function syncDesiredFromExisting(){
 async function onSubmit(e){
   e.preventDefault();
 
-  const client  = gv("client-name").trim();
   const project = gv("project-name").trim();
   const genre   = gv("genre-select").trim();
 
-  if (!client || !project){ alert("法人・個人名／施設名を入力してください。"); return; }
+  // ★法人・個人名は使わない。施設名とジャンルだけ必須
+  if (!project){ alert("施設名を入力してください。"); return; }
   if (!genre){ alert("ジャンルを選択してください。"); return; }
 
   // --- 電気代 ---
@@ -466,7 +466,7 @@ async function onSubmit(e){
     if (!consent){ alert("個人情報の取扱いに同意してください。"); return; }
 
     const payload = {
-      client: { name: client, facility: project, genre },
+      client: { name: project, facility: project, genre }, // ← 名前は施設名と同じにしておく
       acRatioUsed: acBase,
       bills: {
         monthlyInput: monthlyBills,

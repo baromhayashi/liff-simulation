@@ -1,170 +1,169 @@
-/* ベース */
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
 body {
-  font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
-  background: #f6f7fb;
-  color: #222;
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: #f8f8f8;
+  color: #333;
 }
 
-/* ラッパ */
 .main-wrapper {
-  max-width: 880px;
+  max-width: 900px;
   margin: 0 auto;
+  padding: 16px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.form-wrapper {
   background: #fff;
-  padding: 20px 16px 48px;
-  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
-.page-title { font-size: 24px; line-height: 1.3; margin: 8px 0; }
-.page-note { color:#666; margin: 0 0 8px; font-size: 13px; }
-
-/* セクション */
-.form-section { margin: 22px 0; }
-.section-title { font-size: 18px; margin: 0 0 10px; }
-.section-help { color:#666; margin: 6px 0 10px; font-size: 13px; }
-
-/* グリッド */
-.grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-@media (max-width: 720px){ .grid-2 { grid-template-columns: 1fr; } }
-
-/* 電気代入力の左右並び（左：年間平均／右：毎月入力） */
-.bill-dual-grid {
-  display: grid;
-  grid-template-columns: 1fr 3fr;
-  gap: 12px;
-}
-@media (max-width: 720px){
-  .bill-dual-grid { grid-template-columns: 1fr; }
+.form-section {
+  margin-bottom: 32px;
 }
 
-/* 入力 */
-.form-group { display: grid; gap:6px; margin-bottom: 10px; }
-.form-group input, .form-group select {
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.section-help {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 10px 12px;
-  border:1px solid #dcdde2;
-  border-radius:10px;
-  font-size:16px;
-  background:#fff;
-  height: 44px; /* 基本の高さ */
-  line-height: 1.2;
+  font-size: 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
-/* ラジオ */
-.input-type-wrapper { display:flex; gap:16px; margin-bottom: 12px; }
-.input-type-wrapper input[type="radio"]{ transform: scale(1.05); }
-
-/* 月別入力（毎月） */
-.monthly-grid {
-  display:grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-@media (max-width: 640px){ .monthly-grid { grid-template-columns: 1fr; } }
-@media (max-width: 420px){ .monthly-grid { grid-template-columns: 1fr; } }
-
-/* 行追加式（既設・施工希望） */
-.row.existing-row,
-.row.desired-row {
+.grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;  /* サイズ／台数／削除 */
-  gap: 8px;
-  margin-bottom: 8px;
-  align-items: end;
-}
-.row.existing-row .cell label,
-.row.desired-row .cell label {
-  display:block; font-size: 13px; color:#666; margin-bottom: 4px;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
 }
 
-/* ▼サイズ／台数の入力の見た目を「既設」=「施工希望」で統一 */
-.row.existing-row .cell select,
-.row.desired-row  .cell select,
-.row.existing-row .cell input[type="number"],
-.row.desired-row  .cell input[type="number"]{
-  width: 100%;
-  padding: 10px 12px;
-  border:1px solid #dcdde2;
-  border-radius:10px;
-  font-size:16px;
-  background:#fff;
-  height: 44px; /* 同じ高さに統一（PC/タブレット） */
-  line-height: 1.2;
+.btn {
+  background: #4CAF50;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
 }
 
-/* 削除ボタン（既設／施工希望 共通） */
-.inline-delete { white-space: nowrap; }
-
-/* ※ 以前の「既設の削除ボタン非表示」ルールは削除しています */
-
-/* ===== スマホ向け（幅 <= 480px） ===== */
-@media (max-width: 480px){
-
-  /* 既設：サイズ／台数／削除（3カラム） */
-  .row.existing-row {
-    grid-template-columns: 1fr 1fr auto;
-    gap: 6px;
-    align-items: end;
-  }
-
-  /* 施工希望：サイズ／台数／削除（3カラム） */
-  .row.desired-row {
-    grid-template-columns: 1fr 1fr auto;
-    gap: 6px;
-    align-items: end;
-  }
-
-  /* ▼スマホ時も両者で同じ高さに統一 */
-  .row.existing-row .cell select,
-  .row.desired-row  .cell select,
-  .row.existing-row .cell input[type="number"],
-  .row.desired-row  .cell input[type="number"]{
-    padding: 8px 10px;
-    font-size: 14px;
-    height: 40px; /* 同じ高さ（スマホ） */
-  }
-
-  /* 削除ボタンを小さめに */
-  .row.existing-row .actions .btn,
-  .row.desired-row  .actions .btn,
-  .inline-delete {
-    padding: 6px 8px;
-    border-radius: 10px;
-    border: 1px solid #dcdde2;
-    background: #fafafa;
-    font-size: 12px;
-    height: 34px;
-    line-height: 1;
-  }
+.btn-danger {
+  background: #d9534f;
+  color: #fff;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-/* 表（結果表示用） */
-.table-scroll { overflow-x:auto; }
-.table { width:100%; border-collapse: collapse; }
-.table th, .table td {
-  border-bottom: 1px solid #eee; padding: 8px; text-align: left; white-space: nowrap;
-}
-.table thead th { background:#fafbff; position: sticky; top: 0; z-index: 1; }
-.table input[type="number"] {
-  width: 120px; max-width: 100%;
-  padding: 8px 10px; border:1px solid #dcdde2; border-radius: 8px;
+.btn-row {
+  margin-top: 10px;
 }
 
-/* 実行ボタン */
 .form-btn {
-  width: 100%; padding: 14px 16px; font-size: 16px;
-  border: none; border-radius: 12px; background: #2a7cf7; color:#fff; cursor: pointer;
+  width: 100%;
+  background: #007BFF;
+  color: #fff;
+  padding: 14px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 24px;
 }
-.form-btn:hover { background:#2269d3; }
 
-/* 結果 */
-.result-section { margin-top: 24px; padding: 16px; border:1px solid #eaeaf0; border-radius: 12px; background:#fff; }
-.result-block { margin-bottom: 14px; }
-.result-block h3 { margin: 8px 0; font-size: 16px; }
-.kv { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-.kv > div { background:#fafbff; border:1px solid #eef0fa; border-radius: 10px; padding: 10px; }
-.kv span { color:#666; display:block; font-size: 12px; margin-bottom: 4px; }
-.kv .total { grid-column: span 3; }
-@media (max-width: 720px){ .kv { grid-template-columns: 1fr 1fr; } .kv .total { grid-column: span 2; } }
-@media (max-width: 420px){ .kv { grid-template-columns: 1fr; } .kv .total { grid-column: span 1; } }
+.result-section {
+  margin-top: 32px;
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.result-block {
+  margin-bottom: 24px;
+}
+
+.result-block h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.kv div {
+  margin-bottom: 10px;
+}
+
+.kv span {
+  display: inline-block;
+  min-width: 140px;
+  font-weight: 600;
+}
+
+.kv strong {
+  margin-left: 10px;
+  font-size: 17px;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.cell {
+  flex: 1;
+}
+
+.cell.actions {
+  flex: 0 0 auto;
+}
+
+.inline-delete {
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+/* ジャンル項目の枠が不必要に広がらないように、施設名と同等の見た目にする（PCのみ） */
+@media (min-width: 720px) {
+  #genre-select {
+    width: 100%;
+    max-width: 400px;  /* 施設名の入力欄と同じ程度の横幅になるよう制限 */
+  }
+}

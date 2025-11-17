@@ -160,10 +160,11 @@ header {
   border-radius: 6px;
 }
 
-/* ジャンル項目の枠が不必要に広がらないように、施設名と同等の見た目にする（PCのみ） */
+/* ■ PC時のみ、ジャンル選択の select だけ幅を制限する */
+/* ※ 室外機の select/input には絶対に影響しません */
 @media (min-width: 720px) {
   #genre-select {
     width: 100%;
-    max-width: 400px;  /* 施設名の入力欄と同じ程度の横幅になるよう制限 */
+    max-width: 400px;
   }
 }

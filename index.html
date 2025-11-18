@@ -16,11 +16,12 @@
     <main>
       <div class="form-wrapper">
         <form id="simulation-form" novalidate>
+          
           <!-- 基本情報 -->
           <div class="form-section">
             <h2 class="section-title">基本情報</h2>
+
             <div class="grid-2">
-              <!-- 法人／個人名の項目は削除済み -->
               <div class="form-group">
                 <label for="project-name">施設名（必須）</label>
                 <input type="text" id="project-name" placeholder="例：〇〇池袋店" required />
@@ -32,15 +33,16 @@
               <label for="genre-select">ジャンル（必須）</label>
               <select id="genre-select" required>
                 <option value="">選択してください</option>
+
+                <!-- 削除済み：小売店舗（アパレル・雑貨等）、フィットネスジム -->
+
                 <option value="コンビニエンスストア">コンビニエンスストア</option>
                 <option value="パチンコ店">パチンコ店</option>
-                <option value="小売店舗（アパレル・雑貨等）">小売店舗（アパレル・雑貨等）</option>
                 <option value="オフィスビル">オフィスビル</option>
                 <option value="ホテル・宿泊施設">ホテル・宿泊施設</option>
                 <option value="病院クリニック">病院クリニック</option>
                 <option value="学校・教育施設">学校・教育施設</option>
                 <option value="アミューズメント施設（映画館・ゲームセンター）">アミューズメント施設（映画館・ゲームセンター）</option>
-                <option value="フィットネスジム">フィットネスジム</option>
                 <option value="スーパー・食品小売り">スーパー・食品小売り</option>
                 <option value="工場（軽工業系）">工場（軽工業系）</option>
                 <option value="工場（重工業系）">工場（重工業系）</option>
@@ -79,7 +81,7 @@
             </div>
           </div>
 
-          <!-- 室外機サイズ別台数 -->
+          <!-- 室外機 -->
           <div class="form-section">
             <h2 class="section-title">室外機サイズ別台数</h2>
             <p class="section-help">サイズと台数の組み合わせを必要数追加してください。</p>
@@ -89,7 +91,7 @@
             </div>
           </div>
 
-          <!-- 施工希望台数（非表示だがDOMとして存在） -->
+          <!-- 施工希望（非表示） -->
           <div class="form-section">
             <h2 class="section-title">施工希望台数</h2>
             <p class="section-help">導入費用の試算に用います。</p>
@@ -103,7 +105,7 @@
         </form>
       </div>
 
-      <!-- 結果表示 -->
+      <!-- 結果 -->
       <section id="result-area" class="result-section" style="display:none;">
         <h2>結果</h2>
         <div id="result-content"></div>

@@ -14,6 +14,58 @@ const ALPHA = { S:1, M:1, L:2, LL:3, "3L":5, "4L":8, "5L":13, "6L":21, "7L":34, 
 // 基本節電率（方角補正なし）
 const BASE_SAVING_RATE = { S:8, M:12, L:16, LL:20, "3L":24, "4L":24, "5L":20, "6L":18, "7L":16, "8L":14 };
 
+// ▼ジャンル別の既定空調比率（最新仕様）
+// ※「小売店舗」「フィットネスジム」「旧パチンコ店」は削除済み
+const GENRE_DEFAULTS = {
+  "コンビニエンスストア": 25,
+  "パチンコ店（～500台設置店）": 60,
+  "パチンコ店（501～1000台設置店）": 60,
+  "パチンコ店（1001～1500台設置店）": 60,
+  "オフィスビル": 50,
+  "ホテル・宿泊施設": 50,
+  "病院クリニック": 40,
+  "学校・教育施設": 30,
+  "アミューズメント施設（映画館・ゲームセンター）": 45,
+  "スーパー・食品小売り": 25,
+  "工場（軽工業系）": 20,
+  "工場（重工業系）": 10,
+  "倉庫物流施設": 15
+};
+
+// ▼ジャンル別の既定サイズ
+const GENRE_SIZE_DEFAULT = {
+  "コンビニエンスストア": "3L",
+  "パチンコ店（～500台設置店）": "8L",
+  "パチンコ店（501～1000台設置店）": "8L",
+  "パチンコ店（1001～1500台設置店）": "8L",
+  "オフィスビル": "4L",
+  "ホテル・宿泊施設": "4L",
+  "病院クリニック": "LL",
+  "学校・教育施設": "3L",
+  "アミューズメント施設（映画館・ゲームセンター）": "6L",
+  "スーパー・食品小売り": "7L",
+  "工場（軽工業系）": "7L",
+  "工場（重工業系）": "8L",
+  "倉庫物流施設": "8L"
+};
+
+// ▼ジャンル別の既定室外機台数（最大台数）
+const GENRE_MAX_UNITS = {
+  "コンビニエンスストア": 8,
+  "パチンコ店（～500台設置店）": 50,
+  "パチンコ店（501～1000台設置店）": 100,
+  "パチンコ店（1001～1500台設置店）": 150,
+  "オフィスビル": 10,
+  "ホテル・宿泊施設": 6,
+  "病院クリニック": 10,
+  "学校・教育施設": 20,
+  "アミューズメント施設（映画館・ゲームセンター）": 5,
+  "スーパー・食品小売り": 16,
+  "工場（軽工業系）": 29,
+  "工場（重工業系）": 20,
+  "倉庫物流施設": 30
+};
+
 // 月別係数（空調電力の季節変動）
 const MONTH_COEF = {
   1:1.019, 2:1.019, 3:1.019,
@@ -35,52 +87,6 @@ const AREA = {
   S:0.8, M:1.3, L:1.7, LL:2.7, "3L":4.2, "4L":4.6, "5L":6.6, "6L":7.7, "7L":8.9, "8L":10.3
 };
 
-// ▼ジャンル別の既定空調比率（ご指定の値）
-// ※「小売店舗（アパレル・雑貨等）」「フィットネスジム」は削除済み
-const GENRE_DEFAULTS = {
-  "コンビニエンスストア": 25,
-  "パチンコ店": 60,
-  "オフィスビル": 50,
-  "ホテル・宿泊施設": 50,
-  "病院クリニック": 40,
-  "学校・教育施設": 30,
-  "アミューズメント施設（映画館・ゲームセンター）": 45,
-  "スーパー・食品小売り": 25,
-  "工場（軽工業系）": 20,
-  "工場（重工業系）": 10,
-  "倉庫物流施設": 15
-};
-
-// ▼ジャンル別の既定サイズ
-const GENRE_SIZE_DEFAULT = {
-  "コンビニエンスストア": "3L",
-  "パチンコ店": "8L",
-  "オフィスビル": "4L",
-  "ホテル・宿泊施設": "4L",
-  "病院クリニック": "LL",
-  "学校・教育施設": "3L",
-  "アミューズメント施設（映画館・ゲームセンター）": "6L",
-  "スーパー・食品小売り": "7L",
-  "工場（軽工業系）": "7L",
-  "工場（重工業系）": "8L",
-  "倉庫物流施設": "8L"
-};
-
-// ▼ジャンル別の既定室外機台数（最大台数）
-const GENRE_MAX_UNITS = {
-  "コンビニエンスストア": 8,
-  "パチンコ店": 22,
-  "オフィスビル": 10,
-  "ホテル・宿泊施設": 6,
-  "病院クリニック": 10,
-  "学校・教育施設": 20,
-  "アミューズメント施設（映画館・ゲームセンター）": 5,
-  "スーパー・食品小売り": 16,
-  "工場（軽工業系）": 29,
-  "工場（重工業系）": 20,
-  "倉庫物流施設": 30
-};
-
 // 既設・施工希望（行追加式）
 let existingRows = []; // {id, size, count}
 let desiredRows  = []; // {id, size, count}
@@ -96,7 +102,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const acInput  = document.getElementById("ac-ratio");
   if (acInput) acInput.placeholder = "例：25（不明時は空欄で可）";
 
-  // ジャンル選択：既設サイズ・最大台数を自動反映／空調比率は自動入力しない
+  // ジャンル選択：既設サイズ・台数を自動反映（空調比率は自動入力しない）
   const genreSel = document.getElementById("genre-select");
   genreSel.addEventListener("change", () => {
     const g = genreSel.value;
@@ -168,7 +174,7 @@ function setupBillTypeToggle(){
   update();
 }
 
-// ===== 既設：行追加式（方角なし） =====
+// ===== 既設：行追加式 =====
 function renderExistingList(){
   const host = document.getElementById("existing-list");
   host.innerHTML = `<div id="existing-rows"></div>`;
@@ -222,7 +228,7 @@ function paintExistingRows(){
   });
 }
 
-// ===== 施工希望：行追加式（自動反映／非表示で保持） =====
+// ===== 施工希望：行追加式（非表示で保持） =====
 function renderDesiredList(){
   const host = document.getElementById("desired-list");
   host.innerHTML = `<div id="desired-rows"></div>`;
@@ -257,7 +263,7 @@ function paintDesiredRows(){
   });
 }
 
-// ===== 既設 → 施工希望 自動同期（UNKNOWN→ジャンル既定サイズ解決） =====
+// ===== 既設 → 施工希望 自動同期 =====
 function syncDesiredFromExisting(){
   const genre = gv("genre-select").trim();
   const defaultSize = GENRE_SIZE_DEFAULT[genre] || "L";
@@ -276,7 +282,7 @@ function syncDesiredFromExisting(){
 }
 
 // =========================
-// 送信（計算ロジック＋問い合わせドロワー）
+// 送信（計算ロジック＋問い合わせ）
 // =========================
 async function onSubmit(e){
   e.preventDefault();
@@ -284,7 +290,7 @@ async function onSubmit(e){
   const project = gv("project-name").trim();
   const genre   = gv("genre-select").trim();
 
-  // ★法人・個人名は使わない。施設名とジャンルだけ必須
+  // 法人・個人名は不要。施設名＋ジャンルのみ必須
   if (!project){ alert("施設名を入力してください。"); return; }
   if (!genre){ alert("ジャンルを選択してください。"); return; }
 
@@ -461,7 +467,7 @@ async function onSubmit(e){
     if (!consent){ alert("個人情報の取扱いに同意してください。"); return; }
 
     const payload = {
-      client: { name: project, facility: project, genre }, // 名前は施設名と同じ
+      client: { name: project, facility: project, genre }, // 名前は施設名と同じ扱い
       acRatioUsed: acBase,
       bills: {
         monthlyInput: monthlyBills,
